@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const contaFixaSchema = z.object({
   nome: z.string().trim().min(1, "Nome obrigatório").max(80),
-  subgrupo_id: z.string().uuid("Escolha um subgrupo"),
+  categoria_id: z.string().uuid("Escolha uma categoria"),
   // Vazio/undefined = "variável" (valor previsto muda todo mês).
   valor_previsto: z
     .union([z.coerce.number().min(0), z.literal("")])

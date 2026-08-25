@@ -5,16 +5,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlternarAtivaSwitch } from "@/features/contas-fixas/alternar-ativa-switch";
 import { ContaFixaFormDialog } from "@/features/contas-fixas/conta-fixa-form-dialog";
 import { GerarPrevistosButton } from "@/features/contas-fixas/gerar-previstos-button";
-import { getGruposComSubgrupos } from "@/lib/data/categorias";
+import { getCategorias } from "@/lib/data/categorias";
 import { getContasFixas } from "@/lib/data/contas-fixas";
 import { formatCurrency } from "@/lib/format";
 import { currentMonthRef } from "@/lib/timezone";
 
 export default async function ContasFixasPage() {
-  const [contasFixas, grupos] = await Promise.all([getContasFixas(), getGruposComSubgrupos()]);
-  const nomeSubgrupo = new Map(
-    grupos.flatMap((g) => g.subgrupos.map((s) => [s.id, `${g.nome} › ${s.nome}`] as const)),
-  );
+  const [contasFixas, categorias] = await Promise.all([getContasFixas(), getCategorias()]);
+  const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome] as const));
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -23,7 +21,7 @@ export default async function ContasFixasPage() {
         <div className="flex gap-2">
           <GerarPrevistosButton referencia={currentMonthRef()} />
           <ContaFixaFormDialog
-            grupos={grupos}
+            categorias={categorias}
             trigger={
               <Button size="sm">
                 <Plus className="size-4" /> Nova conta fixa
@@ -37,7 +35,7 @@ export default async function ContasFixasPage() {
         <TableHeader>
           <TableRow>
             <TableHead>Nome</TableHead>
-            <TableHead>Subgrupo</TableHead>
+            <TableHead>Categoria</TableHead>
             <TableHead>Valor previsto</TableHead>
             <TableHead>Dia de vencimento</TableHead>
             <TableHead>Situação</TableHead>
@@ -48,7 +46,7 @@ export default async function ContasFixasPage() {
           {contasFixas.map((cf) => (
             <TableRow key={cf.id}>
               <TableCell className="font-medium">{cf.nome}</TableCell>
-              <TableCell>{nomeSubgrupo.get(cf.subgrupo_id) ?? "—"}</TableCell>
+              <TableCell>{nomeCategoria.get(cf.categoria_id) ?? "—"}</TableCell>
               <TableCell>{cf.valor_previsto === null ? "Variável" : formatCurrency(cf.valor_previsto)}</TableCell>
               <TableCell>Dia {cf.dia_vencimento}</TableCell>
               <TableCell>
@@ -56,7 +54,7 @@ export default async function ContasFixasPage() {
               </TableCell>
               <TableCell className="text-right">
                 <ContaFixaFormDialog
-                  grupos={grupos}
+                  categorias={categorias}
                   contaFixa={cf}
                   trigger={
                     <Button variant="ghost" size="sm">

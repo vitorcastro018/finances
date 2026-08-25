@@ -1,60 +1,15 @@
-// Gerado via `mcp__Supabase__generate_typescript_types` a partir do schema
-// real do projeto (ver supabase/migrations). Regerar sempre que o schema
-// mudar — nunca editar as seções `Database`/`Constants` à mão.
+// Escrito à mão a partir do schema em `supabase/migrations/` (sem projeto
+// Supabase vivo neste ambiente para gerar via
+// `mcp__Supabase__generate_typescript_types`). Depois de aplicar as
+// migrations num projeto real, regerar e não editar as seções
+// `Database`/`Constants` à mão.
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
 export type Database = {
-  __InternalSupabase: {
-    PostgrestVersion: "14.15";
-  };
   public: {
     Tables: {
-      contas_fixas: {
-        Row: {
-          ativa: boolean;
-          created_at: string;
-          dia_vencimento: number;
-          id: string;
-          nome: string;
-          subgrupo_id: string;
-          updated_at: string;
-          user_id: string;
-          valor_previsto: number | null;
-        };
-        Insert: {
-          ativa?: boolean;
-          created_at?: string;
-          dia_vencimento: number;
-          id?: string;
-          nome: string;
-          subgrupo_id: string;
-          updated_at?: string;
-          user_id?: string;
-          valor_previsto?: number | null;
-        };
-        Update: {
-          ativa?: boolean;
-          created_at?: string;
-          dia_vencimento?: number;
-          id?: string;
-          nome?: string;
-          subgrupo_id?: string;
-          updated_at?: string;
-          user_id?: string;
-          valor_previsto?: number | null;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "contas_fixas_subgrupo_id_fkey";
-            columns: ["subgrupo_id"];
-            isOneToOne: false;
-            referencedRelation: "subgrupos";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      grupos: {
+      categorias: {
         Row: {
           cor: string;
           created_at: string;
@@ -84,19 +39,62 @@ export type Database = {
         };
         Relationships: [];
       };
+      contas_fixas: {
+        Row: {
+          ativa: boolean;
+          categoria_id: string;
+          created_at: string;
+          dia_vencimento: number;
+          id: string;
+          nome: string;
+          updated_at: string;
+          user_id: string;
+          valor_previsto: number | null;
+        };
+        Insert: {
+          ativa?: boolean;
+          categoria_id: string;
+          created_at?: string;
+          dia_vencimento: number;
+          id?: string;
+          nome: string;
+          updated_at?: string;
+          user_id?: string;
+          valor_previsto?: number | null;
+        };
+        Update: {
+          ativa?: boolean;
+          categoria_id?: string;
+          created_at?: string;
+          dia_vencimento?: number;
+          id?: string;
+          nome?: string;
+          updated_at?: string;
+          user_id?: string;
+          valor_previsto?: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "contas_fixas_categoria_id_fkey";
+            columns: ["categoria_id"];
+            isOneToOne: false;
+            referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       lancamentos: {
         Row: {
+          categoria_id: string;
           contas_fixa_id: string | null;
           created_at: string;
           data_pagamento: string | null;
           data_prevista: string;
-          grupo_id: string;
           id: string;
           metodo: string | null;
           nome: string;
           origem: Database["public"]["Enums"]["origem_lancamento"];
           pago: boolean;
-          subgrupo_id: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at: string;
           user_id: string;
@@ -104,17 +102,16 @@ export type Database = {
           valor_previsto: number;
         };
         Insert: {
+          categoria_id: string;
           contas_fixa_id?: string | null;
           created_at?: string;
           data_pagamento?: string | null;
           data_prevista: string;
-          grupo_id: string;
           id?: string;
           metodo?: string | null;
           nome: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
-          subgrupo_id?: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;
@@ -122,17 +119,16 @@ export type Database = {
           valor_previsto: number;
         };
         Update: {
+          categoria_id?: string;
           contas_fixa_id?: string | null;
           created_at?: string;
           data_pagamento?: string | null;
           data_prevista?: string;
-          grupo_id?: string;
           id?: string;
           metodo?: string | null;
           nome?: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
-          subgrupo_id?: string | null;
           tipo?: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;
@@ -141,59 +137,17 @@ export type Database = {
         };
         Relationships: [
           {
+            foreignKeyName: "lancamentos_categoria_id_fkey";
+            columns: ["categoria_id"];
+            isOneToOne: false;
+            referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+          {
             foreignKeyName: "lancamentos_contas_fixa_id_fkey";
             columns: ["contas_fixa_id"];
             isOneToOne: false;
             referencedRelation: "contas_fixas";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "lancamentos_grupo_id_fkey";
-            columns: ["grupo_id"];
-            isOneToOne: false;
-            referencedRelation: "grupos";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "lancamentos_subgrupo_id_fkey";
-            columns: ["subgrupo_id"];
-            isOneToOne: false;
-            referencedRelation: "subgrupos";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      subgrupos: {
-        Row: {
-          created_at: string;
-          grupo_id: string;
-          id: string;
-          nome: string;
-          updated_at: string;
-          user_id: string;
-        };
-        Insert: {
-          created_at?: string;
-          grupo_id: string;
-          id?: string;
-          nome: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Update: {
-          created_at?: string;
-          grupo_id?: string;
-          id?: string;
-          nome?: string;
-          updated_at?: string;
-          user_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "subgrupos_grupo_id_fkey";
-            columns: ["grupo_id"];
-            isOneToOne: false;
-            referencedRelation: "grupos";
             referencedColumns: ["id"];
           },
         ];
@@ -204,20 +158,18 @@ export type Database = {
       contas_do_mes: {
         Args: { referencia: string };
         Returns: {
+          categoria_cor: string;
+          categoria_id: string;
+          categoria_nome: string;
           contas_fixa_id: string | null;
           data_pagamento: string | null;
           data_prevista: string;
-          grupo_cor: string;
-          grupo_id: string;
-          grupo_nome: string;
           id: string;
           metodo: string | null;
           nome: string;
           origem: Database["public"]["Enums"]["origem_lancamento"];
           pago: boolean;
           situacao: string;
-          subgrupo_id: string | null;
-          subgrupo_nome: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           valor_pago: number | null;
           valor_previsto: number;
@@ -230,7 +182,7 @@ export type Database = {
       mes_referencia: { Args: { d: string }; Returns: string };
     };
     Enums: {
-      origem_lancamento: "telegram" | "web" | "recorrente";
+      origem_lancamento: "web" | "recorrente";
       tipo_lancamento: "entrada" | "saida";
     };
     CompositeTypes: { [_ in never]: never };
@@ -239,8 +191,7 @@ export type Database = {
 
 // Apelidos convenientes, usados no resto do app em vez de indexar
 // `Database["public"]["Tables"][...]` toda vez.
-export type GrupoRow = Database["public"]["Tables"]["grupos"]["Row"];
-export type SubgrupoRow = Database["public"]["Tables"]["subgrupos"]["Row"];
+export type CategoriaRow = Database["public"]["Tables"]["categorias"]["Row"];
 export type ContaFixaRow = Database["public"]["Tables"]["contas_fixas"]["Row"];
 export type LancamentoRow = Database["public"]["Tables"]["lancamentos"]["Row"];
 export type TipoLancamento = Database["public"]["Enums"]["tipo_lancamento"];

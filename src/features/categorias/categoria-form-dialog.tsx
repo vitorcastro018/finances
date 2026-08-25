@@ -15,30 +15,30 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { criarGrupo, editarGrupo } from "@/lib/actions/categorias";
-import type { GrupoRow, TipoLancamento } from "@/lib/supabase/types";
+import { criarCategoria, editarCategoria } from "@/lib/actions/categorias";
+import type { CategoriaRow, TipoLancamento } from "@/lib/supabase/types";
 
-export function GrupoFormDialog({ trigger, grupo }: { trigger: ReactNode; grupo?: GrupoRow }) {
+export function CategoriaFormDialog({ trigger, categoria }: { trigger: ReactNode; categoria?: CategoriaRow }) {
   const [open, setOpen] = useState(false);
-  const [nome, setNome] = useState(grupo?.nome ?? "");
-  const [tipo, setTipo] = useState<TipoLancamento>(grupo?.tipo ?? "saida");
-  const [cor, setCor] = useState(grupo?.cor ?? "#64748b");
+  const [nome, setNome] = useState(categoria?.nome ?? "");
+  const [tipo, setTipo] = useState<TipoLancamento>(categoria?.tipo ?? "saida");
+  const [cor, setCor] = useState(categoria?.cor ?? "#64748b");
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
 
   function submeter() {
     setErro(undefined);
     startTransition(async () => {
-      const result = grupo
-        ? await editarGrupo(grupo.id, { nome, tipo, cor })
-        : await criarGrupo({ nome, tipo, cor });
+      const result = categoria
+        ? await editarCategoria(categoria.id, { nome, tipo, cor })
+        : await criarCategoria({ nome, tipo, cor });
       if (result.error) {
         setErro(result.error);
         return;
       }
-      toast.success(grupo ? "Grupo atualizado." : "Grupo criado.");
+      toast.success(categoria ? "Categoria atualizada." : "Categoria criada.");
       setOpen(false);
-      if (!grupo) setNome("");
+      if (!categoria) setNome("");
     });
   }
 
@@ -47,12 +47,17 @@ export function GrupoFormDialog({ trigger, grupo }: { trigger: ReactNode; grupo?
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{grupo ? "Editar grupo" : "Novo grupo"}</DialogTitle>
+          <DialogTitle>{categoria ? "Editar categoria" : "Nova categoria"}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="nome-grupo">Nome</Label>
-            <Input id="nome-grupo" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Despesas Fixas" />
+            <Label htmlFor="nome-categoria">Nome</Label>
+            <Input
+              id="nome-categoria"
+              value={nome}
+              onChange={(e) => setNome(e.target.value)}
+              placeholder="Ex.: Aluguel, Mercado, Salário"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
@@ -68,15 +73,15 @@ export function GrupoFormDialog({ trigger, grupo }: { trigger: ReactNode; grupo?
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cor-grupo">Cor (gráfico)</Label>
-              <Input id="cor-grupo" type="color" value={cor} onChange={(e) => setCor(e.target.value)} className="h-9 p-1" />
+              <Label htmlFor="cor-categoria">Cor (gráfico)</Label>
+              <Input id="cor-categoria" type="color" value={cor} onChange={(e) => setCor(e.target.value)} className="h-9 p-1" />
             </div>
           </div>
           {erro && <p className="text-sm text-destructive">{erro}</p>}
         </div>
         <DialogFooter>
           <Button disabled={pending || !nome} onClick={submeter}>
-            {grupo ? "Salvar" : "Criar"}
+            {categoria ? "Salvar" : "Criar"}
           </Button>
         </DialogFooter>
       </DialogContent>

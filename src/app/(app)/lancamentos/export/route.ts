@@ -1,10 +1,10 @@
 import type { NextRequest } from "next/server";
 
-import { getGruposComSubgrupos } from "@/lib/data/categorias";
+import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentosParaExport } from "@/lib/data/lancamentos";
 import { filtroLancamentosSchema } from "@/lib/validation/lancamentos";
 
-const cabecalho = ["Data", "Nome", "Tipo", "Grupo", "Subgrupo", "Valor previsto", "Valor pago", "Método", "Pago", "Origem"];
+const cabecalho = ["Data", "Nome", "Tipo", "Categoria", "Valor previsto", "Valor pago", "Método", "Pago", "Origem"];
 
 function csvCampo(valor: string) {
   if (/[";\n]/.test(valor)) return `"${valor.replace(/"/g, '""')}"`;
@@ -26,21 +26,19 @@ export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams);
   const filtros = filtroLancamentosSchema.parse(params);
 
-  const [linhas, grupos] = await Promise.all([
+  const [linhas, categorias] = await Promise.all([
     buscarLancamentosParaExport(filtros),
-    getGruposComSubgrupos(),
+    getCategorias(),
   ]);
 
-  const nomeGrupo = new Map(grupos.map((g) => [g.id, g.nome]));
-  const nomeSubgrupo = new Map(grupos.flatMap((g) => g.subgrupos.map((s) => [s.id, s.nome] as const)));
+  const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
 
   const linhasCsv = linhas.map((l) =>
     [
       dataPtBr(l.data_prevista),
       l.nome,
       l.tipo === "entrada" ? "Entrada" : "Saída",
-      nomeGrupo.get(l.grupo_id) ?? "",
-      l.subgrupo_id ? (nomeSubgrupo.get(l.subgrupo_id) ?? "") : "",
+      nomeCategoria.get(l.categoria_id) ?? "",
       valorPtBr(l.valor_previsto),
       valorPtBr(l.valor_pago),
       l.metodo ?? "",

@@ -17,11 +17,10 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { criarLancamento, editarLancamento } from "@/lib/actions/lancamentos";
 import { todayInAppTimezone } from "@/lib/timezone";
-import type { GrupoComSubgrupos } from "@/lib/data/categorias";
-import type { LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
+import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
 
 type Props = {
-  grupos: GrupoComSubgrupos[];
+  categorias: CategoriaRow[];
   trigger: ReactNode;
   /** Presente = editar; ausente = criar (usado tanto pelo CRUD de /lancamentos
    * quanto pelo botão "adicionar conta avulsa deste mês" em /contas). */
@@ -29,28 +28,25 @@ type Props = {
   dataPrevistaPadrao?: string;
 };
 
-export function LancamentoFormDialog({ grupos, trigger, lancamento, dataPrevistaPadrao }: Props) {
+export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrevistaPadrao }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(lancamento?.nome ?? "");
   const [tipo, setTipo] = useState<TipoLancamento>(lancamento?.tipo ?? "saida");
-  const [grupoId, setGrupoId] = useState(lancamento?.grupo_id ?? "");
-  const [subgrupoId, setSubgrupoId] = useState(lancamento?.subgrupo_id ?? "");
+  const [categoriaId, setCategoriaId] = useState(lancamento?.categoria_id ?? "");
   const [valor, setValor] = useState(lancamento ? String(lancamento.valor_previsto) : "");
   const [data, setData] = useState(lancamento?.data_prevista ?? dataPrevistaPadrao ?? todayInAppTimezone());
   const [metodo, setMetodo] = useState(lancamento?.metodo ?? "");
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
 
-  const gruposDoTipo = useMemo(() => grupos.filter((g) => g.tipo === tipo), [grupos, tipo]);
-  const subgrupoOptions = gruposDoTipo.find((g) => g.id === grupoId)?.subgrupos ?? [];
+  const categoriasDoTipo = useMemo(() => categorias.filter((c) => c.tipo === tipo), [categorias, tipo]);
 
   function submeter() {
     setErro(undefined);
     const input = {
       nome,
       tipo,
-      grupo_id: grupoId,
-      subgrupo_id: subgrupoId,
+      categoria_id: categoriaId,
       valor_previsto: valor,
       data_prevista: data,
       metodo,
@@ -92,8 +88,7 @@ export function LancamentoFormDialog({ grupos, trigger, lancamento, dataPrevista
                 value={tipo}
                 onValueChange={(value) => {
                   setTipo(value as TipoLancamento);
-                  setGrupoId("");
-                  setSubgrupoId("");
+                  setCategoriaId("");
                 }}
               >
                 <SelectTrigger>
@@ -111,37 +106,20 @@ export function LancamentoFormDialog({ grupos, trigger, lancamento, dataPrevista
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Grupo</Label>
-              <Select value={grupoId} onValueChange={(value) => { setGrupoId(value); setSubgrupoId(""); }}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Escolha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {gruposDoTipo.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Subgrupo</Label>
-              <Select value={subgrupoId} onValueChange={setSubgrupoId} disabled={!grupoId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Opcional" />
-                </SelectTrigger>
-                <SelectContent>
-                  {subgrupoOptions.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {s.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div className="space-y-2">
+            <Label>Categoria</Label>
+            <Select value={categoriaId} onValueChange={setCategoriaId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Escolha" />
+              </SelectTrigger>
+              <SelectContent>
+                {categoriasDoTipo.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -158,7 +136,7 @@ export function LancamentoFormDialog({ grupos, trigger, lancamento, dataPrevista
           {erro && <p className="text-sm text-destructive">{erro}</p>}
         </div>
         <DialogFooter>
-          <Button disabled={pending || !nome || !grupoId} onClick={submeter}>
+          <Button disabled={pending || !nome || !categoriaId} onClick={submeter}>
             {lancamento ? "Salvar" : "Adicionar"}
           </Button>
         </DialogFooter>

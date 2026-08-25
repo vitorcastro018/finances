@@ -8,7 +8,7 @@ import { MonthSwitcher } from "@/components/layout/month-switcher";
 import { ContasFilters } from "@/features/contas/contas-filters";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
-import { getGruposComSubgrupos } from "@/lib/data/categorias";
+import { getCategorias } from "@/lib/data/categorias";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { parseMonthRef } from "@/lib/timezone";
@@ -17,28 +17,28 @@ import type { ContaDoMesRow, Situacao } from "@/lib/supabase/types";
 export default async function ContasPage({
   searchParams,
 }: {
-  searchParams: Promise<{ ref?: string; situacao?: Situacao; grupo?: string }>;
+  searchParams: Promise<{ ref?: string; situacao?: Situacao; categoria?: string }>;
 }) {
-  const { ref, situacao, grupo } = await searchParams;
+  const { ref, situacao, categoria } = await searchParams;
   const referencia = parseMonthRef(ref);
 
   const supabase = await createClient();
-  const [{ data, error }, grupos] = await Promise.all([
+  const [{ data, error }, categorias] = await Promise.all([
     supabase.rpc("contas_do_mes", { referencia }),
-    getGruposComSubgrupos(),
+    getCategorias(),
   ]);
 
   // `situacao` volta como `text` do banco; a função SQL só produz um dos três
   // valores de `Situacao`, então o cast é seguro.
   let contas = (error ? [] : (data ?? [])) as ContaDoMesRow[];
   if (situacao) contas = contas.filter((c) => c.situacao === situacao);
-  if (grupo) contas = contas.filter((c) => c.grupo_id === grupo);
+  if (categoria) contas = contas.filter((c) => c.categoria_id === categoria);
 
-  const porGrupo = new Map<string, ContaDoMesRow[]>();
+  const porCategoria = new Map<string, ContaDoMesRow[]>();
   for (const conta of [...contas].sort((a, b) => a.data_prevista.localeCompare(b.data_prevista))) {
-    const lista = porGrupo.get(conta.grupo_nome) ?? [];
+    const lista = porCategoria.get(conta.categoria_nome) ?? [];
     lista.push(conta);
-    porGrupo.set(conta.grupo_nome, lista);
+    porCategoria.set(conta.categoria_nome, lista);
   }
 
   return (
@@ -46,7 +46,7 @@ export default async function ContasPage({
       <div className="flex flex-wrap items-center justify-between gap-4">
         <MonthSwitcher referencia={referencia} />
         <LancamentoFormDialog
-          grupos={grupos}
+          categorias={categorias}
           dataPrevistaPadrao={referencia}
           trigger={
             <Button variant="secondary" size="sm">
@@ -56,7 +56,7 @@ export default async function ContasPage({
         />
       </div>
 
-      <ContasFilters grupos={grupos} />
+      <ContasFilters categorias={categorias} />
 
       {error && (
         <p className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
@@ -64,22 +64,21 @@ export default async function ContasPage({
         </p>
       )}
 
-      {porGrupo.size === 0 && !error && (
+      {porCategoria.size === 0 && !error && (
         <p className="text-sm text-muted-foreground">Nenhuma conta encontrada para este filtro.</p>
       )}
 
-      {[...porGrupo.entries()].map(([nomeGrupo, itens]) => (
-        <Card key={nomeGrupo}>
+      {[...porCategoria.entries()].map(([nomeCategoria, itens]) => (
+        <Card key={nomeCategoria}>
           <CardContent className="p-0">
             <div className="flex items-center gap-2 border-b p-4">
-              <span className="size-2.5 rounded-full" style={{ background: itens[0].grupo_cor }} />
-              <h2 className="font-medium">{nomeGrupo}</h2>
+              <span className="size-2.5 rounded-full" style={{ background: itens[0].categoria_cor }} />
+              <h2 className="font-medium">{nomeCategoria}</h2>
             </div>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
-                  <TableHead>Subgrupo</TableHead>
                   <TableHead>Vencimento</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Situação</TableHead>
@@ -90,7 +89,6 @@ export default async function ContasPage({
                 {itens.map((conta) => (
                   <TableRow key={conta.id}>
                     <TableCell className="font-medium">{conta.nome}</TableCell>
-                    <TableCell className="text-muted-foreground">{conta.subgrupo_nome ?? "—"}</TableCell>
                     <TableCell>{formatDate(conta.data_prevista)}</TableCell>
                     <TableCell>
                       {formatCurrency(conta.valor_previsto)}

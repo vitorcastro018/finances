@@ -13,8 +13,7 @@ export async function buscarLancamentos(
   let query = supabase.from("lancamentos").select("*", { count: "exact" });
   if (filtros.de) query = query.gte("data_prevista", filtros.de);
   if (filtros.ate) query = query.lte("data_prevista", filtros.ate);
-  if (filtros.grupo_id) query = query.eq("grupo_id", filtros.grupo_id);
-  if (filtros.subgrupo_id) query = query.eq("subgrupo_id", filtros.subgrupo_id);
+  if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
   if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);
@@ -33,8 +32,7 @@ export async function buscarLancamentosParaExport(filtros: FiltroLancamentos): P
   let query = supabase.from("lancamentos").select("*");
   if (filtros.de) query = query.gte("data_prevista", filtros.de);
   if (filtros.ate) query = query.lte("data_prevista", filtros.ate);
-  if (filtros.grupo_id) query = query.eq("grupo_id", filtros.grupo_id);
-  if (filtros.subgrupo_id) query = query.eq("subgrupo_id", filtros.subgrupo_id);
+  if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
   if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);

@@ -1,9 +1,9 @@
 # Finanças
 
-App web de controle financeiro pessoal — a segunda porta de entrada/saída para
-os mesmos dados do bot do Telegram, focada em responder "o que eu tenho pra
-pagar esse mês". Next.js (App Router) + Tailwind + shadcn/ui + Supabase (Auth
-+ Postgres), deploy na Vercel.
+MVP web de controle financeiro pessoal — responde "o que eu tenho pra pagar
+esse mês". Só o software web, sem integração com nada externo. Next.js (App
+Router) + Tailwind + shadcn/ui + Supabase (Auth + Postgres), deploy na
+Vercel.
 
 Login único (você), sem cadastro público — o usuário é criado direto no
 Supabase. RLS filtra tudo por `user_id`, então o app já funciona certo se um
@@ -26,19 +26,19 @@ dia virar multiusuário.
 
 ## Banco de dados
 
-Projeto Supabase `finances` (`teyrlkuxrltewajmkvpu`, região `sa-east-1`), já
-criado e com o schema aplicado: `grupos`, `subgrupos`, `contas_fixas`,
-`lancamentos`, as funções `contas_do_mes()` / `gerar_previstos_do_mes()`, e
-RLS em tudo. As migrations em `supabase/migrations/` são o registro do que
-foi aplicado — rodá-las em ordem num projeto novo reproduz o mesmo estado.
+Schema simplificado (MVP): `categorias` (lista única, sem hierarquia
+grupo/subgrupo), `contas_fixas`, `lancamentos`, as funções `contas_do_mes()` /
+`gerar_previstos_do_mes()`, e RLS em tudo. As migrations em
+`supabase/migrations/` são o registro do que deve ser aplicado — rodá-las em
+ordem num projeto Supabase novo (ou resetado) reproduz o schema inteiro.
 
-| Arquivo                             | O que faz                                                    |
-| ------------------------------------ | ------------------------------------------------------------- |
-| `01_grupos_subgrupos.sql`            | taxonomia (grupos e subgrupos) + trigger de `updated_at`       |
-| `02_contas_fixas.sql`                | o molde do que se repete (aluguel, assinaturas...)             |
-| `03_lancamentos.sql`                 | histórico + índice único que garante idempotência por mês      |
-| `04_functions.sql`                   | `gerar_previstos_do_mes()` e `contas_do_mes()`                 |
-| `05_rls.sql`                         | RLS + grants para o papel `authenticated`, com `(select auth.uid())` já otimizado e `search_path` fixo nas funções |
+| Arquivo                | O que faz                                                    |
+| ------------------------ | ------------------------------------------------------------- |
+| `01_categorias.sql`      | tabela `categorias` (nome, tipo entrada/saída, cor) + trigger de `updated_at` |
+| `02_contas_fixas.sql`    | o molde do que se repete (aluguel, assinaturas...)             |
+| `03_lancamentos.sql`     | histórico + índice único que garante idempotência por mês      |
+| `04_functions.sql`       | `gerar_previstos_do_mes()` e `contas_do_mes()`                 |
+| `05_rls.sql`             | RLS + grants para o papel `authenticated`, com `(select auth.uid())` já otimizado e `search_path` fixo nas funções |
 
 ### Criar seu usuário
 
@@ -84,5 +84,7 @@ deploy real.
 
 ## O que este app não faz
 
-Não duplica o agente conversacional do Telegram — não tem chat aqui. É
-puramente CRUD e visualização.
+MVP enxuto, de propósito: sem chat/agente conversacional, sem app mobile,
+sem integração com banco/open finance, sem cadastro público de usuários. É
+puramente CRUD e visualização — cadastrar categorias, contas fixas e
+lançamentos, ver o que falta pagar no mês e exportar em CSV.
