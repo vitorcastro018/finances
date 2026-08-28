@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { MesFilterSelect } from "@/features/lancamentos/mes-filter-select";
 import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
 import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { getCategorias } from "@/lib/data/categorias";
@@ -80,20 +81,10 @@ export default async function LancamentosPage({
         </div>
       </div>
 
-      {/* Form GET nativo: filtra sem precisar de JS no cliente. */}
+      {/* Form GET nativo — filtra sem precisar de JS no cliente, exceto o
+          select de mês, que já submete sozinho ao trocar (MesFilterSelect). */}
       <form className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" method="get">
-        <select
-          name="mes"
-          defaultValue={filtros.mes}
-          className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
-        >
-          <option value="todos">Todo o período</option>
-          {opcoesDeMes().map((opcao) => (
-            <option key={opcao.valor} value={opcao.valor}>
-              {opcao.rotulo}
-            </option>
-          ))}
-        </select>
+        <MesFilterSelect valor={filtros.mes} opcoes={opcoesDeMes()} />
         <select
           name="categoria_id"
           defaultValue={filtros.categoria_id ?? ""}
