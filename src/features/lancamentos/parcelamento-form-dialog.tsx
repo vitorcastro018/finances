@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
 import { criarParcelamento } from "@/lib/actions/lancamentos";
+import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { formatCurrency } from "@/lib/format";
 import { calcularParcelas } from "@/lib/parcelamento";
 import { todayInAppTimezone } from "@/lib/timezone";
@@ -113,9 +114,9 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
                     <SelectValue placeholder="Escolha" />
                   </SelectTrigger>
                   <SelectContent>
-                    {categoriasDoTipo.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
-                        {c.nome}
+                    {ordenarCategoriasParaSelect(categoriasDoTipo).map((opcao) => (
+                      <SelectItem key={opcao.id} value={opcao.id}>
+                        {opcao.label}
                       </SelectItem>
                     ))}
                   </SelectContent>

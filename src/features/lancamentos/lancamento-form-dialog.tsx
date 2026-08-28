@@ -17,14 +17,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
 import { criarLancamento, editarLancamento } from "@/lib/actions/lancamentos";
+import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { todayInAppTimezone } from "@/lib/timezone";
 import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
 
 type Props = {
   categorias: CategoriaRow[];
   trigger: ReactNode;
-  /** Presente = editar; ausente = criar (usado tanto pelo CRUD de /lancamentos
-   * quanto pelo botão "adicionar conta avulsa deste mês" em /contas). */
+  /** Presente = editar; ausente = criar. */
   lancamento?: LancamentoRow;
   dataPrevistaPadrao?: string;
 };
@@ -118,9 +118,9 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
                   <SelectValue placeholder="Escolha" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categoriasDoTipo.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.nome}
+                  {ordenarCategoriasParaSelect(categoriasDoTipo).map((opcao) => (
+                    <SelectItem key={opcao.id} value={opcao.id}>
+                      {opcao.label}
                     </SelectItem>
                   ))}
                 </SelectContent>

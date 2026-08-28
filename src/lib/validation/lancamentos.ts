@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { currentMonthRef, monthRefToParam } from "@/lib/timezone";
+
 export const lancamentoSchema = z.object({
   nome: z.string().trim().min(1, "Nome obrigatório").max(120),
   tipo: z.enum(["entrada", "saida"]),
@@ -48,8 +50,12 @@ export const parcelamentoSchema = z.object({
 export type ParcelamentoInput = z.input<typeof parcelamentoSchema>;
 
 export const filtroLancamentosSchema = z.object({
-  de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+  // "yyyy-mm" de um mês específico, ou "todos" pra ver o período inteiro.
+  // Sem o parâmetro na URL, cai no mês atual — é assim que a tela sempre
+  // abre já filtrada em "agora", como pedido.
+  mes: z
+    .union([z.literal("todos"), z.string().regex(/^\d{4}-\d{2}$/, "Mês inválido")])
+    .default(() => monthRefToParam(currentMonthRef())),
   categoria_id: z.string().uuid().optional(),
   tipo: z.enum(["entrada", "saida"]).optional(),
   pago: z.enum(["true", "false"]).optional(),

@@ -19,7 +19,6 @@ import type { ActionResult } from "@/lib/actions/categorias";
 
 function revalidarTelas() {
   revalidatePath("/");
-  revalidatePath("/contas");
   revalidatePath("/lancamentos");
 }
 

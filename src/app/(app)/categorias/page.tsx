@@ -1,13 +1,14 @@
 import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ApagarCategoriaButton } from "@/features/categorias/apagar-categoria-button";
 import { CategoriaFormDialog } from "@/features/categorias/categoria-form-dialog";
-import { getCategorias } from "@/lib/data/categorias";
+import { SubcategoriaFormDialog } from "@/features/categorias/subcategoria-form-dialog";
+import { getCategoriasComSubcategorias } from "@/lib/data/categorias";
 
 export default async function CategoriasPage() {
-  const categorias = await getCategorias();
+  const categorias = await getCategoriasComSubcategorias();
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -28,7 +29,7 @@ export default async function CategoriasPage() {
         </p>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2">
         {categorias.map((categoria) => (
           <Card key={categoria.id}>
             <CardHeader className="flex flex-row items-center justify-between">
@@ -51,6 +52,35 @@ export default async function CategoriasPage() {
                 <ApagarCategoriaButton id={categoria.id} nome={categoria.nome} />
               </div>
             </CardHeader>
+            <CardContent className="space-y-2">
+              {categoria.subcategorias.map((sub) => (
+                <div key={sub.id} className="flex items-center justify-between rounded-md border px-3 py-1.5 text-sm">
+                  <span>{sub.nome}</span>
+                  <div className="flex items-center gap-1">
+                    <CategoriaFormDialog
+                      categoria={sub}
+                      trigger={
+                        <Button variant="ghost" size="sm">
+                          Editar
+                        </Button>
+                      }
+                    />
+                    <ApagarCategoriaButton id={sub.id} nome={sub.nome} />
+                  </div>
+                </div>
+              ))}
+              {categoria.subcategorias.length === 0 && (
+                <p className="text-sm text-muted-foreground">Nenhuma subcategoria ainda.</p>
+              )}
+              <SubcategoriaFormDialog
+                categoriaPai={categoria}
+                trigger={
+                  <Button variant="outline" size="sm" className="w-full">
+                    <Plus className="size-4" /> Subcategoria
+                  </Button>
+                }
+              />
+            </CardContent>
           </Card>
         ))}
       </div>

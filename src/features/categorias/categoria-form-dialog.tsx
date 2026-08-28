@@ -29,9 +29,11 @@ export function CategoriaFormDialog({ trigger, categoria }: { trigger: ReactNode
   function submeter() {
     setErro(undefined);
     startTransition(async () => {
+      // categoria_pai_id nunca é editável aqui — reenviar o valor atual
+      // evita que salvar o nome/cor de uma subcategoria a solte do pai.
       const result = categoria
-        ? await editarCategoria(categoria.id, { nome, tipo, cor })
-        : await criarCategoria({ nome, tipo, cor });
+        ? await editarCategoria(categoria.id, { nome, tipo, cor, categoria_pai_id: categoria.categoria_pai_id })
+        : await criarCategoria({ nome, tipo, cor, categoria_pai_id: null });
       if (result.error) {
         setErro(result.error);
         return;
@@ -47,7 +49,9 @@ export function CategoriaFormDialog({ trigger, categoria }: { trigger: ReactNode
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{categoria ? "Editar categoria" : "Nova categoria"}</DialogTitle>
+          <DialogTitle>
+            {categoria ? (categoria.categoria_pai_id ? "Editar subcategoria" : "Editar categoria") : "Nova categoria"}
+          </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="space-y-2">

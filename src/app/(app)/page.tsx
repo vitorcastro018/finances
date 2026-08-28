@@ -109,7 +109,7 @@ export default async function DashboardPage({
         <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Próximos vencimentos</CardTitle>
           <Button asChild variant="link" size="sm" className="h-auto p-0">
-            <Link href="/contas">Ver todas</Link>
+            <Link href="/lancamentos">Ver todos</Link>
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">

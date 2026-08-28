@@ -4,15 +4,24 @@ import type { LancamentoRow } from "@/lib/supabase/types";
 
 export const PAGE_SIZE = 20;
 
+/** "2026-09" -> { de: "2026-09-01", ate: "2026-09-30" }. "todos" -> null
+ * (sem filtro de data). */
+function rangeDoMes(mes: string): { de: string; ate: string } | null {
+  if (mes === "todos") return null;
+  const [ano, mesNumero] = mes.split("-").map(Number);
+  const ultimoDia = new Date(ano, mesNumero, 0).getDate();
+  return { de: `${mes}-01`, ate: `${mes}-${String(ultimoDia).padStart(2, "0")}` };
+}
+
 export async function buscarLancamentos(
   filtros: FiltroLancamentos,
 ): Promise<{ linhas: LancamentoRow[]; total: number }> {
   const supabase = await createClient();
   const offset = (filtros.pagina - 1) * PAGE_SIZE;
+  const range = rangeDoMes(filtros.mes);
 
   let query = supabase.from("lancamentos").select("*", { count: "exact" });
-  if (filtros.de) query = query.gte("data_prevista", filtros.de);
-  if (filtros.ate) query = query.lte("data_prevista", filtros.ate);
+  if (range) query = query.gte("data_prevista", range.de).lte("data_prevista", range.ate);
   if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
@@ -75,10 +84,10 @@ export async function getParcelamentosAbertos(): Promise<ParcelamentoAberto[]> {
 /** Todas as linhas do período filtrado, sem paginação — para o export CSV. */
 export async function buscarLancamentosParaExport(filtros: FiltroLancamentos): Promise<LancamentoRow[]> {
   const supabase = await createClient();
+  const range = rangeDoMes(filtros.mes);
 
   let query = supabase.from("lancamentos").select("*");
-  if (filtros.de) query = query.gte("data_prevista", filtros.de);
-  if (filtros.ate) query = query.lte("data_prevista", filtros.ate);
+  if (range) query = query.gte("data_prevista", range.de).lte("data_prevista", range.ate);
   if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
