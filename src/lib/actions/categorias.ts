@@ -4,19 +4,23 @@ import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { categoriaSchema, type CategoriaInput } from "@/lib/validation/categorias";
+import type { CategoriaRow } from "@/lib/supabase/types";
 
 export type ActionResult = { error?: string };
 
-export async function criarCategoria(input: CategoriaInput): Promise<ActionResult> {
+/** Devolve a categoria criada (não só `{}`) — usado pelo "criar categoria
+ * rápida" nos formulários de lançamento, que precisa da linha nova (id, cor)
+ * pra já deixá-la selecionada sem esperar a página recarregar. */
+export async function criarCategoria(input: CategoriaInput): Promise<ActionResult & { categoria?: CategoriaRow }> {
   const parsed = categoriaSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
   const supabase = await createClient();
-  const { error } = await supabase.from("categorias").insert(parsed.data);
+  const { data, error } = await supabase.from("categorias").insert(parsed.data).select().single();
   if (error) return { error: traduzErro(error) };
 
   revalidatePath("/categorias");
-  return {};
+  return { categoria: data };
 }
 
 export async function editarCategoria(id: string, input: CategoriaInput): Promise<ActionResult> {
