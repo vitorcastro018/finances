@@ -1,16 +1,33 @@
 import Link from "next/link";
-import { Download, Plus } from "lucide-react";
+import { CreditCard, Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SituacaoBadge } from "@/components/ui/situacao-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
+import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentos, PAGE_SIZE } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { calcularSituacao } from "@/lib/situacao";
+import { currentMonthRef, formatMonthOptionLabel, monthRefToParam, shiftMonthRef } from "@/lib/timezone";
 import { filtroLancamentosSchema } from "@/lib/validation/lancamentos";
+
+// 12 meses pra trás e 6 pra frente, a partir do mês atual — intervalo
+// generoso o bastante pra achar qualquer lançamento recente sem virar uma
+// lista infinita.
+function opcoesDeMes(): { valor: string; rotulo: string }[] {
+  const opcoes = [];
+  for (let delta = -12; delta <= 6; delta++) {
+    const ref = shiftMonthRef(currentMonthRef(), delta);
+    opcoes.push({ valor: monthRefToParam(ref), rotulo: formatMonthOptionLabel(ref) });
+  }
+  return opcoes;
+}
 
 export default async function LancamentosPage({
   searchParams,
@@ -27,9 +44,12 @@ export default async function LancamentosPage({
 
   const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const paramsExport = new URLSearchParams(
-    Object.entries(rawParams).filter(([, v]) => v) as [string, string][],
-  ).toString();
+  // Reflete o mês já resolvido (com o default aplicado) de volta pro link de
+  // export, mesmo que a URL original não tivesse "mes".
+  const paramsExport = new URLSearchParams({
+    ...Object.fromEntries(Object.entries(rawParams).filter(([, v]) => v)),
+    mes: filtros.mes,
+  }).toString();
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -37,10 +57,18 @@ export default async function LancamentosPage({
         <h1 className="text-xl font-semibold">Lançamentos</h1>
         <div className="flex gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href={`/lancamentos/export${paramsExport ? `?${paramsExport}` : ""}`}>
+            <Link href={`/lancamentos/export?${paramsExport}`}>
               <Download className="size-4" /> Exportar CSV
             </Link>
           </Button>
+          <ParcelamentoFormDialog
+            categorias={categorias}
+            trigger={
+              <Button variant="secondary" size="sm">
+                <CreditCard className="size-4" /> Parcelado
+              </Button>
+            }
+          />
           <LancamentoFormDialog
             categorias={categorias}
             trigger={
@@ -53,18 +81,28 @@ export default async function LancamentosPage({
       </div>
 
       {/* Form GET nativo: filtra sem precisar de JS no cliente. */}
-      <form className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7" method="get">
-        <Input type="date" name="de" defaultValue={filtros.de} aria-label="De" />
-        <Input type="date" name="ate" defaultValue={filtros.ate} aria-label="Até" />
+      <form className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" method="get">
+        <select
+          name="mes"
+          defaultValue={filtros.mes}
+          className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+        >
+          <option value="todos">Todo o período</option>
+          {opcoesDeMes().map((opcao) => (
+            <option key={opcao.valor} value={opcao.valor}>
+              {opcao.rotulo}
+            </option>
+          ))}
+        </select>
         <select
           name="categoria_id"
           defaultValue={filtros.categoria_id ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
         >
           <option value="">Toda categoria</option>
-          {categorias.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
+          {ordenarCategoriasParaSelect(categorias).map((opcao) => (
+            <option key={opcao.id} value={opcao.id}>
+              {opcao.label}
             </option>
           ))}
         </select>
@@ -95,6 +133,7 @@ export default async function LancamentosPage({
       <Table>
         <TableHeader>
           <TableRow>
+            <TableHead>Situação</TableHead>
             <TableHead>Data</TableHead>
             <TableHead>Nome</TableHead>
             <TableHead>Tipo</TableHead>
@@ -108,6 +147,9 @@ export default async function LancamentosPage({
         <TableBody>
           {linhas.map((l) => (
             <TableRow key={l.id}>
+              <TableCell>
+                <SituacaoBadge situacao={calcularSituacao(l.pago, l.data_prevista)} />
+              </TableCell>
               <TableCell>{formatDate(l.data_prevista)}</TableCell>
               <TableCell className="font-medium">{l.nome}</TableCell>
               <TableCell>{l.tipo === "entrada" ? "Entrada" : "Saída"}</TableCell>
@@ -137,7 +179,7 @@ export default async function LancamentosPage({
           ))}
           {linhas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground">
+              <TableCell colSpan={9} className="text-center text-muted-foreground">
                 Nenhum lançamento encontrado.
               </TableCell>
             </TableRow>
@@ -148,9 +190,10 @@ export default async function LancamentosPage({
       {totalPaginas > 1 && (
         <div className="flex items-center justify-center gap-2 text-sm">
           {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((pagina) => {
-            const params = new URLSearchParams(
-              Object.entries(rawParams).filter(([k, v]) => v && k !== "pagina") as [string, string][],
-            );
+            const params = new URLSearchParams({
+              ...Object.fromEntries(Object.entries(rawParams).filter(([k, v]) => v && k !== "pagina")),
+              mes: filtros.mes,
+            });
             params.set("pagina", String(pagina));
             const ativo = pagina === filtros.pagina;
             return (

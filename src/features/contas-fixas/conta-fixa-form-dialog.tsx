@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { criarContaFixa, editarContaFixa } from "@/lib/actions/contas-fixas";
+import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
 
 type Props = { categorias: CategoriaRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
@@ -69,9 +70,9 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
                 <SelectValue placeholder="Escolha" />
               </SelectTrigger>
               <SelectContent>
-                {categorias.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
+                {ordenarCategoriasParaSelect(categorias).map((opcao) => (
+                  <SelectItem key={opcao.id} value={opcao.id}>
+                    {opcao.label}
                   </SelectItem>
                 ))}
               </SelectContent>

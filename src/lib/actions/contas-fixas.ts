@@ -47,7 +47,7 @@ export async function gerarPrevistosDoMes(referencia: string): Promise<ActionRes
   if (error) return { error: error.message };
 
   revalidatePath("/");
-  revalidatePath("/contas");
+  revalidatePath("/lancamentos");
   revalidatePath("/contas-fixas");
   return { geradas: data?.length ?? 0 };
 }

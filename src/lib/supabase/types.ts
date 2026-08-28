@@ -11,6 +11,7 @@ export type Database = {
     Tables: {
       categorias: {
         Row: {
+          categoria_pai_id: string | null;
           cor: string;
           created_at: string;
           id: string;
@@ -20,6 +21,7 @@ export type Database = {
           user_id: string;
         };
         Insert: {
+          categoria_pai_id?: string | null;
           cor?: string;
           created_at?: string;
           id?: string;
@@ -29,6 +31,7 @@ export type Database = {
           user_id?: string;
         };
         Update: {
+          categoria_pai_id?: string | null;
           cor?: string;
           created_at?: string;
           id?: string;
@@ -37,7 +40,15 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
         };
-        Relationships: [];
+        Relationships: [
+          {
+            foreignKeyName: "categorias_categoria_pai_id_fkey";
+            columns: ["categoria_pai_id"];
+            isOneToOne: false;
+            referencedRelation: "categorias";
+            referencedColumns: ["id"];
+          },
+        ];
       };
       contas_fixas: {
         Row: {
@@ -95,6 +106,9 @@ export type Database = {
           nome: string;
           origem: Database["public"]["Enums"]["origem_lancamento"];
           pago: boolean;
+          parcela_numero: number | null;
+          parcela_total: number | null;
+          parcelamento_id: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at: string;
           user_id: string;
@@ -112,6 +126,9 @@ export type Database = {
           nome: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
+          parcela_numero?: number | null;
+          parcela_total?: number | null;
+          parcelamento_id?: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;
@@ -129,6 +146,9 @@ export type Database = {
           nome?: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
+          parcela_numero?: number | null;
+          parcela_total?: number | null;
+          parcelamento_id?: string | null;
           tipo?: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;

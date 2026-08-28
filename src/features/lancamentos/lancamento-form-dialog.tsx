@@ -15,15 +15,16 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
 import { criarLancamento, editarLancamento } from "@/lib/actions/lancamentos";
+import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { todayInAppTimezone } from "@/lib/timezone";
 import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
 
 type Props = {
   categorias: CategoriaRow[];
   trigger: ReactNode;
-  /** Presente = editar; ausente = criar (usado tanto pelo CRUD de /lancamentos
-   * quanto pelo botão "adicionar conta avulsa deste mês" em /contas). */
+  /** Presente = editar; ausente = criar. */
   lancamento?: LancamentoRow;
   dataPrevistaPadrao?: string;
 };
@@ -38,8 +39,11 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   const [metodo, setMetodo] = useState(lancamento?.metodo ?? "");
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
+  // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
+  // página recarregar pra ela aparecer no <select>.
+  const [listaCategorias, setListaCategorias] = useState(categorias);
 
-  const categoriasDoTipo = useMemo(() => categorias.filter((c) => c.tipo === tipo), [categorias, tipo]);
+  const categoriasDoTipo = useMemo(() => listaCategorias.filter((c) => c.tipo === tipo), [listaCategorias, tipo]);
 
   function submeter() {
     setErro(undefined);
@@ -108,18 +112,27 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
 
           <div className="space-y-2">
             <Label>Categoria</Label>
-            <Select value={categoriaId} onValueChange={setCategoriaId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha" />
-              </SelectTrigger>
-              <SelectContent>
-                {categoriasDoTipo.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>
-                    {c.nome}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex gap-2">
+              <Select value={categoriaId} onValueChange={setCategoriaId}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Escolha" />
+                </SelectTrigger>
+                <SelectContent>
+                  {ordenarCategoriasParaSelect(categoriasDoTipo).map((opcao) => (
+                    <SelectItem key={opcao.id} value={opcao.id}>
+                      {opcao.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <CategoriaQuickCreate
+                tipo={tipo}
+                onCreated={(nova) => {
+                  setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
+                  setCategoriaId(nova.id);
+                }}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">

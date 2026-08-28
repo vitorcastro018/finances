@@ -32,6 +32,38 @@ export function shiftMonthRef(ref: string, deltaMonths: number): string {
   return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}-01`;
 }
 
+/** "2026-01-31" + 1 -> "2026-02-28" (clampa ao último dia do mês, como
+ * `gerar_previstos_do_mes()` faz no banco para contas fixas). */
+export function addMonthsToDate(date: string, months: number): string {
+  const [year, month, day] = date.split("-").map(Number);
+  const shifted = addMonths(new Date(year, month - 1, 1), months);
+  const ultimoDia = new Date(shifted.getFullYear(), shifted.getMonth() + 1, 0).getDate();
+  const diaClamped = Math.min(day, ultimoDia);
+  return `${shifted.getFullYear()}-${String(shifted.getMonth() + 1).padStart(2, "0")}-${String(diaClamped).padStart(2, "0")}`;
+}
+
+const MESES_ABREVIADOS = [
+  "jan",
+  "fev",
+  "mar",
+  "abr",
+  "mai",
+  "jun",
+  "jul",
+  "ago",
+  "set",
+  "out",
+  "nov",
+  "dez",
+];
+
+/** "2026-09" | "2026-09-01" -> "set/2026" — rótulo curto pro <select> de mês
+ * do filtro de lançamentos. */
+export function formatMonthOptionLabel(ref: string): string {
+  const [year, month] = ref.split("-").map(Number);
+  return `${MESES_ABREVIADOS[month - 1]}/${year}`;
+}
+
 const monthLabelFormatter = new Intl.DateTimeFormat("pt-BR", {
   month: "long",
   year: "numeric",

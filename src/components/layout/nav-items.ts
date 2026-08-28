@@ -1,8 +1,7 @@
-import { LayoutDashboard, ListChecks, Receipt, Tags, Repeat } from "lucide-react";
+import { LayoutDashboard, Receipt, Tags, Repeat } from "lucide-react";
 
 export const navItems = [
   { href: "/", label: "Início", icon: LayoutDashboard },
-  { href: "/contas", label: "Contas", icon: ListChecks },
   { href: "/lancamentos", label: "Lançamentos", icon: Receipt },
   { href: "/categorias", label: "Categorias", icon: Tags },
   { href: "/contas-fixas", label: "Fixas", icon: Repeat },
