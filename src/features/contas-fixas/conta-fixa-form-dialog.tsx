@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarContaFixa, editarContaFixa } from "@/lib/actions/contas-fixas";
-import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
 
 type Props = { categorias: CategoriaRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
@@ -63,21 +62,7 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
             <Input id="nome-conta-fixa" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Aluguel" />
           </div>
 
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <Select value={categoriaId} onValueChange={setCategoriaId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Escolha" />
-              </SelectTrigger>
-              <SelectContent>
-                {ordenarCategoriasParaSelect(categorias).map((opcao) => (
-                  <SelectItem key={opcao.id} value={opcao.id}>
-                    {opcao.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <CategoriaSubcategoriaSelect categorias={categorias} value={categoriaId} onChange={setCategoriaId} />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

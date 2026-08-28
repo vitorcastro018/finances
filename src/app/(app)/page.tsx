@@ -6,11 +6,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthSwitcher } from "@/components/layout/month-switcher";
 import { CategoriaBarChart, type GastoPorCategoria } from "@/features/dashboard/categoria-bar-chart";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { getCategorias } from "@/lib/data/categorias";
 import { getParcelamentosAbertos } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { parseMonthRef } from "@/lib/timezone";
-import type { ContaDoMesRow } from "@/lib/supabase/types";
+import type { CategoriaRow, ContaDoMesRow } from "@/lib/supabase/types";
 
 export default async function DashboardPage({
   searchParams,
@@ -21,10 +22,21 @@ export default async function DashboardPage({
   const referencia = parseMonthRef(ref);
 
   const supabase = await createClient();
-  const [{ data, error }, parcelamentos] = await Promise.all([
+  const [{ data, error }, parcelamentos, categorias] = await Promise.all([
     supabase.rpc("contas_do_mes", { referencia }),
     getParcelamentosAbertos(),
+    getCategorias(),
   ]);
+  const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
+  // `contas_do_mes` devolve a categoria exata do lançamento — pode já ser
+  // uma subcategoria. Pra agrupar o gráfico principal pela categoria "mãe",
+  // resolve o topo aqui; sem pai, a própria categoria já é o topo.
+  function resolverTopo(categoriaId: string): CategoriaRow | undefined {
+    const categoria = categoriaPorId.get(categoriaId);
+    if (!categoria) return undefined;
+    if (!categoria.categoria_pai_id) return categoria;
+    return categoriaPorId.get(categoria.categoria_pai_id) ?? categoria;
+  }
   // `situacao` volta como `text` do banco; a função SQL só produz um dos três
   // valores de `Situacao`, então o cast é seguro.
   const contas = (error ? [] : (data ?? [])) as ContaDoMesRow[];
@@ -39,15 +51,35 @@ export default async function DashboardPage({
     .reduce((sum, c) => sum + (c.valor_pago ?? c.valor_previsto), 0);
   const saldoDoMes = entradasEfetivadas - totalPago;
 
+  // Agregado pela categoria "mãe" — sem isso, cada subcategoria virava uma
+  // barra própria, fragmentando o gráfico principal.
   const gastoPorCategoria = new Map<string, GastoPorCategoria>();
   for (const conta of saidas) {
-    const atual = gastoPorCategoria.get(conta.categoria_nome) ?? {
-      categoria: conta.categoria_nome,
-      cor: conta.categoria_cor,
+    const topo = resolverTopo(conta.categoria_id);
+    const chave = topo?.id ?? conta.categoria_id;
+    const atual = gastoPorCategoria.get(chave) ?? {
+      categoria: topo?.nome ?? conta.categoria_nome,
+      cor: topo?.cor ?? conta.categoria_cor,
       total: 0,
     };
     atual.total += conta.valor_previsto;
-    gastoPorCategoria.set(conta.categoria_nome, atual);
+    gastoPorCategoria.set(chave, atual);
+  }
+
+  // Só as contas lançadas numa subcategoria de verdade — mostra o detalhe
+  // que o gráfico acima esconde ao agregar no topo.
+  const gastoPorSubcategoria = new Map<string, GastoPorCategoria>();
+  for (const conta of saidas) {
+    const categoria = categoriaPorId.get(conta.categoria_id);
+    if (!categoria?.categoria_pai_id) continue;
+    const pai = categoriaPorId.get(categoria.categoria_pai_id);
+    const atual = gastoPorSubcategoria.get(categoria.id) ?? {
+      categoria: pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome,
+      cor: categoria.cor,
+      total: 0,
+    };
+    atual.total += conta.valor_previsto;
+    gastoPorSubcategoria.set(categoria.id, atual);
   }
 
   const proximosVencimentos = contas
@@ -104,6 +136,17 @@ export default async function DashboardPage({
           <CategoriaBarChart dados={[...gastoPorCategoria.values()]} />
         </CardContent>
       </Card>
+
+      {gastoPorSubcategoria.size > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Gasto por subcategoria</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <CategoriaBarChart dados={[...gastoPorSubcategoria.values()]} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
