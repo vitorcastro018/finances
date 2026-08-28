@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthSwitcher } from "@/components/layout/month-switcher";
-import { GrupoBarChart, type GastoPorGrupo } from "@/features/dashboard/grupo-bar-chart";
+import { CategoriaBarChart, type GastoPorCategoria } from "@/features/dashboard/categoria-bar-chart";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
@@ -35,15 +35,15 @@ export default async function DashboardPage({
     .reduce((sum, c) => sum + (c.valor_pago ?? c.valor_previsto), 0);
   const saldoDoMes = entradasEfetivadas - totalPago;
 
-  const gastoPorGrupo = new Map<string, GastoPorGrupo>();
+  const gastoPorCategoria = new Map<string, GastoPorCategoria>();
   for (const conta of saidas) {
-    const atual = gastoPorGrupo.get(conta.grupo_nome) ?? {
-      grupo: conta.grupo_nome,
-      cor: conta.grupo_cor,
+    const atual = gastoPorCategoria.get(conta.categoria_nome) ?? {
+      categoria: conta.categoria_nome,
+      cor: conta.categoria_cor,
       total: 0,
     };
     atual.total += conta.valor_previsto;
-    gastoPorGrupo.set(conta.grupo_nome, atual);
+    gastoPorCategoria.set(conta.categoria_nome, atual);
   }
 
   const proximosVencimentos = contas
@@ -94,10 +94,10 @@ export default async function DashboardPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Gasto por grupo</CardTitle>
+          <CardTitle>Gasto por categoria</CardTitle>
         </CardHeader>
         <CardContent>
-          <GrupoBarChart dados={[...gastoPorGrupo.values()]} />
+          <CategoriaBarChart dados={[...gastoPorCategoria.values()]} />
         </CardContent>
       </Card>
 

@@ -4,9 +4,9 @@ import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxi
 
 import { formatCurrency } from "@/lib/format";
 
-export type GastoPorGrupo = { grupo: string; cor: string; total: number };
+export type GastoPorCategoria = { categoria: string; cor: string; total: number };
 
-export function GrupoBarChart({ dados }: { dados: GastoPorGrupo[] }) {
+export function CategoriaBarChart({ dados }: { dados: GastoPorCategoria[] }) {
   if (dados.length === 0) {
     return (
       <p className="flex h-64 items-center justify-center text-sm text-muted-foreground">
@@ -20,7 +20,7 @@ export function GrupoBarChart({ dados }: { dados: GastoPorGrupo[] }) {
       <BarChart data={dados} margin={{ left: 8, right: 8 }}>
         <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
         <XAxis
-          dataKey="grupo"
+          dataKey="categoria"
           tick={{ fontSize: 12 }}
           tickLine={false}
           axisLine={false}
@@ -49,7 +49,7 @@ export function GrupoBarChart({ dados }: { dados: GastoPorGrupo[] }) {
         />
         <Bar dataKey="total" radius={[4, 4, 0, 0]}>
           {dados.map((item) => (
-            <Cell key={item.grupo} fill={item.cor} />
+            <Cell key={item.categoria} fill={item.cor} />
           ))}
         </Bar>
       </BarChart>

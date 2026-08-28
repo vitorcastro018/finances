@@ -17,15 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { criarContaFixa, editarContaFixa } from "@/lib/actions/contas-fixas";
-import type { GrupoComSubgrupos } from "@/lib/data/categorias";
-import type { ContaFixaRow } from "@/lib/supabase/types";
+import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
 
-type Props = { grupos: GrupoComSubgrupos[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
+type Props = { categorias: CategoriaRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
 
-export function ContaFixaFormDialog({ grupos, trigger, contaFixa }: Props) {
+export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(contaFixa?.nome ?? "");
-  const [subgrupoId, setSubgrupoId] = useState(contaFixa?.subgrupo_id ?? "");
+  const [categoriaId, setCategoriaId] = useState(contaFixa?.categoria_id ?? "");
   const [valor, setValor] = useState(contaFixa?.valor_previsto != null ? String(contaFixa.valor_previsto) : "");
   const [diaVencimento, setDiaVencimento] = useState(contaFixa ? String(contaFixa.dia_vencimento) : "5");
   const [ativa, setAtiva] = useState(contaFixa?.ativa ?? true);
@@ -34,7 +33,7 @@ export function ContaFixaFormDialog({ grupos, trigger, contaFixa }: Props) {
 
   function submeter() {
     setErro(undefined);
-    const input = { nome, subgrupo_id: subgrupoId, valor_previsto: valor, dia_vencimento: diaVencimento, ativa };
+    const input = { nome, categoria_id: categoriaId, valor_previsto: valor, dia_vencimento: diaVencimento, ativa };
     startTransition(async () => {
       const result = contaFixa ? await editarContaFixa(contaFixa.id, input) : await criarContaFixa(input);
       if (result.error) {
@@ -64,19 +63,17 @@ export function ContaFixaFormDialog({ grupos, trigger, contaFixa }: Props) {
           </div>
 
           <div className="space-y-2">
-            <Label>Subgrupo</Label>
-            <Select value={subgrupoId} onValueChange={setSubgrupoId}>
+            <Label>Categoria</Label>
+            <Select value={categoriaId} onValueChange={setCategoriaId}>
               <SelectTrigger>
                 <SelectValue placeholder="Escolha" />
               </SelectTrigger>
               <SelectContent>
-                {grupos.map((g) =>
-                  g.subgrupos.map((s) => (
-                    <SelectItem key={s.id} value={s.id}>
-                      {g.nome} › {s.nome}
-                    </SelectItem>
-                  )),
-                )}
+                {categorias.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.nome}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -115,7 +112,7 @@ export function ContaFixaFormDialog({ grupos, trigger, contaFixa }: Props) {
           {erro && <p className="text-sm text-destructive">{erro}</p>}
         </div>
         <DialogFooter>
-          <Button disabled={pending || !nome || !subgrupoId} onClick={submeter}>
+          <Button disabled={pending || !nome || !categoriaId} onClick={submeter}>
             {contaFixa ? "Salvar" : "Criar"}
           </Button>
         </DialogFooter>

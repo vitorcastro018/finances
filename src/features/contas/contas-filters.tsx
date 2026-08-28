@@ -3,9 +3,9 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { GrupoRow } from "@/lib/supabase/types";
+import type { CategoriaRow } from "@/lib/supabase/types";
 
-export function ContasFilters({ grupos }: { grupos: GrupoRow[] }) {
+export function ContasFilters({ categorias }: { categorias: CategoriaRow[] }) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -31,15 +31,15 @@ export function ContasFilters({ grupos }: { grupos: GrupoRow[] }) {
         </SelectContent>
       </Select>
 
-      <Select value={searchParams.get("grupo") ?? "todos"} onValueChange={(v) => setParam("grupo", v)}>
+      <Select value={searchParams.get("categoria") ?? "todos"} onValueChange={(v) => setParam("categoria", v)}>
         <SelectTrigger className="w-48">
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="todos">Todo grupo</SelectItem>
-          {grupos.map((g) => (
-            <SelectItem key={g.id} value={g.id}>
-              {g.nome}
+          <SelectItem value="todos">Toda categoria</SelectItem>
+          {categorias.map((c) => (
+            <SelectItem key={c.id} value={c.id}>
+              {c.nome}
             </SelectItem>
           ))}
         </SelectContent>

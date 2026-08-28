@@ -5,11 +5,9 @@ import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { apagarGrupo, apagarSubgrupo } from "@/lib/actions/categorias";
+import { apagarCategoria } from "@/lib/actions/categorias";
 
-type Props = { id: string; nome: string; tipo: "grupo" | "subgrupo" };
-
-export function ApagarCategoriaButton({ id, nome, tipo }: Props) {
+export function ApagarCategoriaButton({ id, nome }: { id: string; nome: string }) {
   const [pending, startTransition] = useTransition();
 
   return (
@@ -18,11 +16,11 @@ export function ApagarCategoriaButton({ id, nome, tipo }: Props) {
       size="icon"
       disabled={pending}
       onClick={() => {
-        if (!window.confirm(`Apagar o ${tipo} "${nome}"?`)) return;
+        if (!window.confirm(`Apagar a categoria "${nome}"?`)) return;
         startTransition(async () => {
-          const result = tipo === "grupo" ? await apagarGrupo(id) : await apagarSubgrupo(id);
+          const result = await apagarCategoria(id);
           if (result.error) toast.error(result.error);
-          else toast.success(`${tipo === "grupo" ? "Grupo" : "Subgrupo"} apagado.`);
+          else toast.success("Categoria apagada.");
         });
       }}
     >

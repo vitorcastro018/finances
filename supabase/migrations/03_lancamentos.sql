@@ -1,8 +1,8 @@
--- Histórico completo (o que hoje é a planilha) e também as contas do mês:
--- uma linha aqui tanto pode vir de `gerar_previstos_do_mes()` (origem
--- 'recorrente') quanto ser lançada direto pelo bot do Telegram ou pela web.
+-- Histórico completo (o que era a planilha) e também as contas do mês: uma
+-- linha aqui tanto pode vir de `gerar_previstos_do_mes()` (origem
+-- 'recorrente') quanto ser lançada direto pela web.
 
-create type origem_lancamento as enum ('telegram', 'web', 'recorrente');
+create type origem_lancamento as enum ('web', 'recorrente');
 
 -- `date_trunc('month', date)` não é IMMUTABLE nesta versão do Postgres (só a
 -- variante com timestamp/timestamptz é), então não pode aparecer numa
@@ -26,8 +26,7 @@ create table lancamentos (
   contas_fixa_id uuid references contas_fixas (id) on delete set null,
   nome text not null check (btrim(nome) <> ''),
   tipo tipo_lancamento not null,
-  grupo_id uuid not null references grupos (id) on delete restrict,
-  subgrupo_id uuid references subgrupos (id) on delete set null,
+  categoria_id uuid not null references categorias (id) on delete restrict,
   valor_previsto numeric(12, 2) not null check (valor_previsto >= 0),
   -- Valor previsto ≠ valor pago (conta de luz variável, por exemplo) — os
   -- dois convivem, nunca um sobrescreve o outro.
@@ -42,13 +41,12 @@ create table lancamentos (
 );
 
 create index lancamentos_data_prevista_idx on lancamentos (user_id, data_prevista);
-create index lancamentos_grupo_idx on lancamentos (grupo_id);
-create index lancamentos_subgrupo_idx on lancamentos (subgrupo_id);
+create index lancamentos_categoria_idx on lancamentos (categoria_id);
 create index lancamentos_pago_idx on lancamentos (user_id, pago);
 
 -- Garante a idempotência de `gerar_previstos_do_mes()`: no máximo uma linha
--- gerada por conta fixa e por mês (o "nunca duplicar o previsto do mês" da
--- spec vira uma restrição do banco, não uma checagem em código).
+-- gerada por conta fixa e por mês (o "nunca duplica o previsto do mês" vira
+-- uma restrição do banco, não uma checagem em código).
 create unique index lancamentos_contas_fixa_por_mes_idx
   on lancamentos (contas_fixa_id, mes_referencia(data_prevista))
   where contas_fixa_id is not null;

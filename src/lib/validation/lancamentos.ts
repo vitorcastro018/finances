@@ -3,11 +3,7 @@ import { z } from "zod";
 export const lancamentoSchema = z.object({
   nome: z.string().trim().min(1, "Nome obrigatório").max(120),
   tipo: z.enum(["entrada", "saida"]),
-  grupo_id: z.string().uuid("Escolha um grupo"),
-  subgrupo_id: z
-    .union([z.string().uuid(), z.literal("")])
-    .optional()
-    .transform((value) => (value ? value : null)),
+  categoria_id: z.string().uuid("Escolha uma categoria"),
   valor_previsto: z.coerce.number().min(0, "Valor não pode ser negativo"),
   data_prevista: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   metodo: z
@@ -33,8 +29,7 @@ export type MarcarPagoInput = z.infer<typeof marcarPagoSchema>;
 export const filtroLancamentosSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
-  grupo_id: z.string().uuid().optional(),
-  subgrupo_id: z.string().uuid().optional(),
+  categoria_id: z.string().uuid().optional(),
   tipo: z.enum(["entrada", "saida"]).optional(),
   pago: z.enum(["true", "false"]).optional(),
   busca: z.string().trim().max(120).optional(),

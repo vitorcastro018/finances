@@ -7,7 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
-import { getGruposComSubgrupos } from "@/lib/data/categorias";
+import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentos, PAGE_SIZE } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { filtroLancamentosSchema } from "@/lib/validation/lancamentos";
@@ -20,13 +20,12 @@ export default async function LancamentosPage({
   const rawParams = await searchParams;
   const filtros = filtroLancamentosSchema.parse(rawParams);
 
-  const [{ linhas, total }, grupos] = await Promise.all([
+  const [{ linhas, total }, categorias] = await Promise.all([
     buscarLancamentos(filtros),
-    getGruposComSubgrupos(),
+    getCategorias(),
   ]);
 
-  const nomeGrupo = new Map(grupos.map((g) => [g.id, g.nome]));
-  const nomeSubgrupo = new Map(grupos.flatMap((g) => g.subgrupos.map((s) => [s.id, s.nome] as const)));
+  const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paramsExport = new URLSearchParams(
     Object.entries(rawParams).filter(([, v]) => v) as [string, string][],
@@ -43,7 +42,7 @@ export default async function LancamentosPage({
             </Link>
           </Button>
           <LancamentoFormDialog
-            grupos={grupos}
+            categorias={categorias}
             trigger={
               <Button size="sm">
                 <Plus className="size-4" /> Novo lançamento
@@ -58,14 +57,14 @@ export default async function LancamentosPage({
         <Input type="date" name="de" defaultValue={filtros.de} aria-label="De" />
         <Input type="date" name="ate" defaultValue={filtros.ate} aria-label="Até" />
         <select
-          name="grupo_id"
-          defaultValue={filtros.grupo_id ?? ""}
+          name="categoria_id"
+          defaultValue={filtros.categoria_id ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
         >
-          <option value="">Todo grupo</option>
-          {grupos.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.nome}
+          <option value="">Toda categoria</option>
+          {categorias.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.nome}
             </option>
           ))}
         </select>
@@ -99,8 +98,7 @@ export default async function LancamentosPage({
             <TableHead>Data</TableHead>
             <TableHead>Nome</TableHead>
             <TableHead>Tipo</TableHead>
-            <TableHead>Grupo</TableHead>
-            <TableHead>Subgrupo</TableHead>
+            <TableHead>Categoria</TableHead>
             <TableHead>Valor</TableHead>
             <TableHead>Método</TableHead>
             <TableHead>Origem</TableHead>
@@ -113,8 +111,7 @@ export default async function LancamentosPage({
               <TableCell>{formatDate(l.data_prevista)}</TableCell>
               <TableCell className="font-medium">{l.nome}</TableCell>
               <TableCell>{l.tipo === "entrada" ? "Entrada" : "Saída"}</TableCell>
-              <TableCell>{nomeGrupo.get(l.grupo_id) ?? "—"}</TableCell>
-              <TableCell>{l.subgrupo_id ? (nomeSubgrupo.get(l.subgrupo_id) ?? "—") : "—"}</TableCell>
+              <TableCell>{nomeCategoria.get(l.categoria_id) ?? "—"}</TableCell>
               <TableCell>
                 {formatCurrency(l.valor_previsto)}
                 {l.valor_pago !== null && l.valor_pago !== l.valor_previsto && (
@@ -126,7 +123,7 @@ export default async function LancamentosPage({
               <TableCell className="flex justify-end gap-1">
                 <MarcarPagoDialog conta={l} />
                 <LancamentoFormDialog
-                  grupos={grupos}
+                  categorias={categorias}
                   lancamento={l}
                   trigger={
                     <Button variant="ghost" size="sm">
@@ -140,7 +137,7 @@ export default async function LancamentosPage({
           ))}
           {linhas.length === 0 && (
             <TableRow>
-              <TableCell colSpan={9} className="text-center text-muted-foreground">
+              <TableCell colSpan={8} className="text-center text-muted-foreground">
                 Nenhum lançamento encontrado.
               </TableCell>
             </TableRow>
