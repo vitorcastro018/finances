@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Download, Plus } from "lucide-react";
+import { CreditCard, Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
 import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentos, PAGE_SIZE } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
@@ -41,6 +42,14 @@ export default async function LancamentosPage({
               <Download className="size-4" /> Exportar CSV
             </Link>
           </Button>
+          <ParcelamentoFormDialog
+            categorias={categorias}
+            trigger={
+              <Button variant="secondary" size="sm">
+                <CreditCard className="size-4" /> Parcelado
+              </Button>
+            }
+          />
           <LancamentoFormDialog
             categorias={categorias}
             trigger={

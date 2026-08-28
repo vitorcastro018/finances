@@ -26,6 +26,27 @@ export const marcarPagoSchema = z.object({
 
 export type MarcarPagoInput = z.infer<typeof marcarPagoSchema>;
 
+/** Compra parcelada (ex.: TV em 6x) — gera N lançamentos de uma vez, ver
+ * `criarParcelamento` em `lib/actions/lancamentos.ts`. */
+export const parcelamentoSchema = z.object({
+  nome: z.string().trim().min(1, "Nome obrigatório").max(120),
+  tipo: z.enum(["entrada", "saida"]),
+  categoria_id: z.string().uuid("Escolha uma categoria"),
+  valor_total: z.coerce.number().positive("Valor deve ser maior que zero"),
+  parcelas: z.coerce.number().int().min(2, "Mínimo 2 parcelas").max(60, "Máximo 60 parcelas"),
+  // Vazio = sem juros (divisão simples do valor total).
+  juros_mensal: z.coerce.number().min(0, "Juros não pode ser negativo").max(100, "Juros muito alto").optional().default(0),
+  data_primeira_parcela: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
+  metodo: z
+    .string()
+    .trim()
+    .max(60)
+    .optional()
+    .transform((value) => (value ? value : null)),
+});
+
+export type ParcelamentoInput = z.input<typeof parcelamentoSchema>;
+
 export const filtroLancamentosSchema = z.object({
   de: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   ate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),

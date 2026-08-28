@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthSwitcher } from "@/components/layout/month-switcher";
 import { CategoriaBarChart, type GastoPorCategoria } from "@/features/dashboard/categoria-bar-chart";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { getParcelamentosAbertos } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { parseMonthRef } from "@/lib/timezone";
@@ -20,7 +21,10 @@ export default async function DashboardPage({
   const referencia = parseMonthRef(ref);
 
   const supabase = await createClient();
-  const { data, error } = await supabase.rpc("contas_do_mes", { referencia });
+  const [{ data, error }, parcelamentos] = await Promise.all([
+    supabase.rpc("contas_do_mes", { referencia }),
+    getParcelamentosAbertos(),
+  ]);
   // `situacao` volta como `text` do banco; a função SQL só produz um dos três
   // valores de `Situacao`, então o cast é seguro.
   const contas = (error ? [] : (data ?? [])) as ContaDoMesRow[];
@@ -129,6 +133,35 @@ export default async function DashboardPage({
                 </p>
               </div>
               <MarcarPagoDialog conta={conta} />
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Parcelamentos em aberto</CardTitle>
+          <Button asChild variant="link" size="sm" className="h-auto p-0">
+            <Link href="/lancamentos">Ver lançamentos</Link>
+          </Button>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {parcelamentos.length === 0 && (
+            <p className="text-sm text-muted-foreground">Nenhuma compra parcelada em aberto.</p>
+          )}
+          {parcelamentos.map((p) => (
+            <div
+              key={p.parcelamento_id}
+              className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3"
+            >
+              <div className="min-w-0">
+                <p className="truncate font-medium">{p.nome}</p>
+                <p className="text-xs text-muted-foreground">
+                  Faltam {p.parcela_total - p.parcelas_pagas} de {p.parcela_total} · próxima{" "}
+                  {formatDate(p.proxima_data)} · {formatCurrency(p.valor_parcela)}
+                </p>
+              </div>
+              <span className="text-sm font-medium">{formatCurrency(p.valor_restante)} restantes</span>
             </div>
           ))}
         </CardContent>

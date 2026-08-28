@@ -95,6 +95,9 @@ export type Database = {
           nome: string;
           origem: Database["public"]["Enums"]["origem_lancamento"];
           pago: boolean;
+          parcela_numero: number | null;
+          parcela_total: number | null;
+          parcelamento_id: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at: string;
           user_id: string;
@@ -112,6 +115,9 @@ export type Database = {
           nome: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
+          parcela_numero?: number | null;
+          parcela_total?: number | null;
+          parcelamento_id?: string | null;
           tipo: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;
@@ -129,6 +135,9 @@ export type Database = {
           nome?: string;
           origem?: Database["public"]["Enums"]["origem_lancamento"];
           pago?: boolean;
+          parcela_numero?: number | null;
+          parcela_total?: number | null;
+          parcelamento_id?: string | null;
           tipo?: Database["public"]["Enums"]["tipo_lancamento"];
           updated_at?: string;
           user_id?: string;
