@@ -15,9 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
+import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarLancamento, editarLancamento } from "@/lib/actions/lancamentos";
-import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { todayInAppTimezone } from "@/lib/timezone";
 import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
 
@@ -110,30 +109,16 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Categoria</Label>
-            <div className="flex gap-2">
-              <Select value={categoriaId} onValueChange={setCategoriaId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Escolha" />
-                </SelectTrigger>
-                <SelectContent>
-                  {ordenarCategoriasParaSelect(categoriasDoTipo).map((opcao) => (
-                    <SelectItem key={opcao.id} value={opcao.id}>
-                      {opcao.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <CategoriaQuickCreate
-                tipo={tipo}
-                onCreated={(nova) => {
-                  setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
-                  setCategoriaId(nova.id);
-                }}
-              />
-            </div>
-          </div>
+          <CategoriaSubcategoriaSelect
+            categorias={categoriasDoTipo}
+            value={categoriaId}
+            onChange={setCategoriaId}
+            tipo={tipo}
+            onCategoriaCriada={(nova) => {
+              setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
+              setCategoriaId(nova.id);
+            }}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">

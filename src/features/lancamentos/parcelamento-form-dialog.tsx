@@ -15,9 +15,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
+import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarParcelamento } from "@/lib/actions/lancamentos";
-import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { formatCurrency } from "@/lib/format";
 import { calcularParcelas } from "@/lib/parcelamento";
 import { todayInAppTimezone } from "@/lib/timezone";
@@ -87,50 +86,35 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
             <Input id="nome-parcelamento" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: TV" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label>Tipo</Label>
-              <Select
-                value={tipo}
-                onValueChange={(value) => {
-                  setTipo(value as TipoLancamento);
-                  setCategoriaId("");
-                }}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="saida">Saída</SelectItem>
-                  <SelectItem value="entrada">Entrada</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Categoria</Label>
-              <div className="flex gap-2">
-                <Select value={categoriaId} onValueChange={setCategoriaId}>
-                  <SelectTrigger className="flex-1">
-                    <SelectValue placeholder="Escolha" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ordenarCategoriasParaSelect(categoriasDoTipo).map((opcao) => (
-                      <SelectItem key={opcao.id} value={opcao.id}>
-                        {opcao.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <CategoriaQuickCreate
-                  tipo={tipo}
-                  onCreated={(nova) => {
-                    setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
-                    setCategoriaId(nova.id);
-                  }}
-                />
-              </div>
-            </div>
+          <div className="space-y-2">
+            <Label>Tipo</Label>
+            <Select
+              value={tipo}
+              onValueChange={(value) => {
+                setTipo(value as TipoLancamento);
+                setCategoriaId("");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="saida">Saída</SelectItem>
+                <SelectItem value="entrada">Entrada</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
+
+          <CategoriaSubcategoriaSelect
+            categorias={categoriasDoTipo}
+            value={categoriaId}
+            onChange={setCategoriaId}
+            tipo={tipo}
+            onCategoriaCriada={(nova) => {
+              setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
+              setCategoriaId(nova.id);
+            }}
+          />
 
           <div className="grid grid-cols-3 gap-3">
             <div className="space-y-2">
