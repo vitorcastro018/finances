@@ -46,10 +46,13 @@ export default async function DashboardPage({
   const totalPago = saidas.filter((c) => c.pago).reduce((sum, c) => sum + (c.valor_pago ?? c.valor_previsto), 0);
   const itensFaltando = saidas.filter((c) => !c.pago).length;
 
-  const entradasEfetivadas = contas
-    .filter((c) => c.tipo === "entrada" && c.pago)
-    .reduce((sum, c) => sum + (c.valor_pago ?? c.valor_previsto), 0);
-  const saldoDoMes = entradasEfetivadas - totalPago;
+  const entradas = contas.filter((c) => c.tipo === "entrada");
+  const totalPrevistoReceber = entradas.reduce((sum, c) => sum + c.valor_previsto, 0);
+  const totalRecebido = entradas.filter((c) => c.pago).reduce((sum, c) => sum + (c.valor_pago ?? c.valor_previsto), 0);
+  const saldoDoMes = totalRecebido - totalPago;
+  // Tudo previsto de entrada menos tudo previsto de saída, sem esperar nada
+  // ser marcado como pago/recebido — "se tudo acontecer como esperado".
+  const saldoPrevisto = totalPrevistoReceber - totalPrevisto;
 
   // Agregado pela categoria "mãe" — sem isso, cada subcategoria virava uma
   // barra própria, fragmentando o gráfico principal.
@@ -112,12 +115,36 @@ export default async function DashboardPage({
         </Card>
         <Card>
           <CardHeader>
+            <CardTitle>Previsto a receber</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">{formatCurrency(totalPrevistoReceber)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Já recebido</CardTitle>
+          </CardHeader>
+          <CardContent className="text-xl font-semibold">{formatCurrency(totalRecebido)}</CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Saldo previsto</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className={`text-xl font-semibold ${saldoPrevisto < 0 ? "text-destructive" : "text-success"}`}>
+              {formatCurrency(saldoPrevisto)}
+            </p>
+            <p className="text-xs text-muted-foreground">Tudo previsto, pago ou não</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
             <CardTitle>Saldo do mês</CardTitle>
           </CardHeader>
-          <CardContent
-            className={`text-xl font-semibold ${saldoDoMes < 0 ? "text-destructive" : "text-success"}`}
-          >
-            {formatCurrency(saldoDoMes)}
+          <CardContent>
+            <p className={`text-xl font-semibold ${saldoDoMes < 0 ? "text-destructive" : "text-success"}`}>
+              {formatCurrency(saldoDoMes)}
+            </p>
+            <p className="text-xs text-muted-foreground">Só o que já foi pago/recebido</p>
           </CardContent>
         </Card>
         <Card>
