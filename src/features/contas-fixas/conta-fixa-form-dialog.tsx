@@ -15,21 +15,33 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarContaFixa, editarContaFixa } from "@/lib/actions/contas-fixas";
-import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
+import type { CategoriaRow, ContaFixaRow, TipoLancamento } from "@/lib/supabase/types";
 
 type Props = { categorias: CategoriaRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
 
 export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(contaFixa?.nome ?? "");
+  // contas_fixas não tem coluna própria de tipo — herda da categoria (ver
+  // gerar_previstos_do_mes() no banco). Ao editar, descobre o tipo atual
+  // pela categoria já ligada; ao criar, "saída" é o caso mais comum.
+  const [tipo, setTipo] = useState<TipoLancamento>(
+    categorias.find((c) => c.id === contaFixa?.categoria_id)?.tipo ?? "saida",
+  );
   const [categoriaId, setCategoriaId] = useState(contaFixa?.categoria_id ?? "");
   const [valor, setValor] = useState(contaFixa?.valor_previsto != null ? String(contaFixa.valor_previsto) : "");
   const [diaVencimento, setDiaVencimento] = useState(contaFixa ? String(contaFixa.dia_vencimento) : "5");
   const [ativa, setAtiva] = useState(contaFixa?.ativa ?? true);
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
+  // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
+  // página recarregar pra ela aparecer no <select>.
+  const [listaCategorias, setListaCategorias] = useState(categorias);
+
+  const categoriasDoTipo = listaCategorias.filter((c) => c.tipo === tipo);
 
   function submeter() {
     setErro(undefined);
@@ -62,7 +74,35 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
             <Input id="nome-conta-fixa" value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Ex.: Aluguel" />
           </div>
 
-          <CategoriaSubcategoriaSelect categorias={categorias} value={categoriaId} onChange={setCategoriaId} />
+          <div className="space-y-2">
+            <Label>Tipo</Label>
+            <Select
+              value={tipo}
+              onValueChange={(value) => {
+                setTipo(value as TipoLancamento);
+                setCategoriaId("");
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="saida">Saída</SelectItem>
+                <SelectItem value="entrada">Entrada</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <CategoriaSubcategoriaSelect
+            categorias={categoriasDoTipo}
+            value={categoriaId}
+            onChange={setCategoriaId}
+            tipo={tipo}
+            onCategoriaCriada={(nova) => {
+              setListaCategorias((prev) => [...prev, nova].sort((a, b) => a.nome.localeCompare(b.nome)));
+              setCategoriaId(nova.id);
+            }}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
