@@ -8,7 +8,6 @@ import { GerarPrevistosButton } from "@/features/contas-fixas/gerar-previstos-bu
 import { getCategorias } from "@/lib/data/categorias";
 import { getContasFixas } from "@/lib/data/contas-fixas";
 import { formatCurrency } from "@/lib/format";
-import { currentMonthRef } from "@/lib/timezone";
 import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
 
 function TabelaContasFixas({
@@ -84,7 +83,7 @@ export default async function ContasFixasPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Contas fixas</h1>
         <div className="flex gap-2">
-          <GerarPrevistosButton referencia={currentMonthRef()} />
+          <GerarPrevistosButton />
           <ContaFixaFormDialog
             categorias={categorias}
             trigger={
