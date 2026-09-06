@@ -13,6 +13,40 @@ function rangeDoMes(mes: string): { de: string; ate: string } | null {
   return { de: `${mes}-01`, ate: `${mes}-${String(ultimoDia).padStart(2, "0")}` };
 }
 
+/** Coluna(s) real(is) por trás de cada cabeçalho clicável. "situacao" não é
+ * uma coluna — agrupa por pago e desempata por data, mais simples que
+ * replicar a regra completa de atrasado/a vencer (calculada em JS). E
+ * "categoria" também não é coluna aqui (é o nome da categoria ligada, não
+ * `categoria_id`) — essa é reordenada à parte, em JS, depois de buscar (ver
+ * LancamentosPage), então aqui só cai num fallback razoável. */
+function ordenacaoParaColunas(
+  ordenar: FiltroLancamentos["ordenar"],
+  direcao: "asc" | "desc",
+): { coluna: string; crescente: boolean }[] {
+  const crescente = direcao === "asc";
+  switch (ordenar) {
+    case "situacao":
+      return [
+        { coluna: "pago", crescente },
+        { coluna: "data_prevista", crescente: true },
+      ];
+    case "nome":
+      return [{ coluna: "nome", crescente }];
+    case "tipo":
+      return [{ coluna: "tipo", crescente }];
+    case "valor":
+      return [{ coluna: "valor_previsto", crescente }];
+    case "metodo":
+      return [{ coluna: "metodo", crescente }];
+    case "origem":
+      return [{ coluna: "origem", crescente }];
+    case "data":
+      return [{ coluna: "data_prevista", crescente }];
+    default:
+      return [{ coluna: "data_prevista", crescente: false }];
+  }
+}
+
 export async function buscarLancamentos(
   filtros: FiltroLancamentos,
 ): Promise<{ linhas: LancamentoRow[]; total: number }> {
@@ -27,9 +61,11 @@ export async function buscarLancamentos(
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
   if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);
 
-  const { data, count, error } = await query
-    .order("data_prevista", { ascending: false })
-    .range(offset, offset + PAGE_SIZE - 1);
+  for (const { coluna, crescente } of ordenacaoParaColunas(filtros.ordenar, filtros.direcao)) {
+    query = query.order(coluna, { ascending: crescente });
+  }
+
+  const { data, count, error } = await query.range(offset, offset + PAGE_SIZE - 1);
   if (error) throw error;
   return { linhas: data ?? [], total: count ?? 0 };
 }
@@ -93,7 +129,11 @@ export async function buscarLancamentosParaExport(filtros: FiltroLancamentos): P
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
   if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);
 
-  const { data, error } = await query.order("data_prevista", { ascending: false });
+  for (const { coluna, crescente } of ordenacaoParaColunas(filtros.ordenar, filtros.direcao)) {
+    query = query.order(coluna, { ascending: crescente });
+  }
+
+  const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
 }
