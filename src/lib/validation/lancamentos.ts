@@ -49,7 +49,24 @@ export const parcelamentoSchema = z.object({
 
 export type ParcelamentoInput = z.input<typeof parcelamentoSchema>;
 
-export const filtroLancamentosSchema = z.object({
+export const COLUNAS_ORDENAVEIS = [
+  "situacao",
+  "data",
+  "nome",
+  "tipo",
+  "categoria",
+  "valor",
+  "metodo",
+  "origem",
+] as const;
+
+export type ColunaOrdenavel = (typeof COLUNAS_ORDENAVEIS)[number];
+
+// O <select> "Toda categoria"/"Entrada/Saída"/"Pago/Não pago" manda o campo
+// vazio ("") quando fica na opção default — sem isso, `z.string().uuid()` e
+// os `z.enum(...)` abaixo rejeitam "" (não é undefined) e o parse inteiro
+// falha, derrubando a página a cada filtro. Trata "" como "não veio".
+const filtroLancamentosSchemaBase = z.object({
   // "yyyy-mm" de um mês específico, ou "todos" pra ver o período inteiro.
   // Sem o parâmetro na URL, cai no mês atual — é assim que a tela sempre
   // abre já filtrada em "agora", como pedido.
@@ -61,6 +78,13 @@ export const filtroLancamentosSchema = z.object({
   pago: z.enum(["true", "false"]).optional(),
   busca: z.string().trim().max(120).optional(),
   pagina: z.coerce.number().int().min(1).default(1),
+  ordenar: z.enum(COLUNAS_ORDENAVEIS).default("data"),
+  direcao: z.enum(["asc", "desc"]).default("desc"),
 });
 
-export type FiltroLancamentos = z.infer<typeof filtroLancamentosSchema>;
+export const filtroLancamentosSchema = z.preprocess((valor) => {
+  if (typeof valor !== "object" || valor === null) return valor;
+  return Object.fromEntries(Object.entries(valor as Record<string, unknown>).filter(([, v]) => v !== ""));
+}, filtroLancamentosSchemaBase);
+
+export type FiltroLancamentos = z.infer<typeof filtroLancamentosSchemaBase>;
