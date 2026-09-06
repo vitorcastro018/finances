@@ -1,7 +1,7 @@
 import type { NextRequest } from "next/server";
 
 import { getCategorias } from "@/lib/data/categorias";
-import { buscarLancamentosParaExport } from "@/lib/data/lancamentos";
+import { buscarLancamentos } from "@/lib/data/lancamentos";
 import { filtroLancamentosSchema } from "@/lib/validation/lancamentos";
 
 const cabecalho = ["Data", "Nome", "Tipo", "Categoria", "Valor previsto", "Valor pago", "Método", "Pago", "Origem"];
@@ -26,10 +26,7 @@ export async function GET(request: NextRequest) {
   const params = Object.fromEntries(request.nextUrl.searchParams);
   const filtros = filtroLancamentosSchema.parse(params);
 
-  const [linhas, categorias] = await Promise.all([
-    buscarLancamentosParaExport(filtros),
-    getCategorias(),
-  ]);
+  const [linhas, categorias] = await Promise.all([buscarLancamentos(filtros), getCategorias()]);
 
   const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
 
