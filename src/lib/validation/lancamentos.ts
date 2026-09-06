@@ -77,7 +77,6 @@ const filtroLancamentosSchemaBase = z.object({
   tipo: z.enum(["entrada", "saida"]).optional(),
   pago: z.enum(["true", "false"]).optional(),
   busca: z.string().trim().max(120).optional(),
-  pagina: z.coerce.number().int().min(1).default(1),
   ordenar: z.enum(COLUNAS_ORDENAVEIS).default("data"),
   direcao: z.enum(["asc", "desc"]).default("desc"),
 });

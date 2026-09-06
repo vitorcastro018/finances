@@ -2,8 +2,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { FiltroLancamentos } from "@/lib/validation/lancamentos";
 import type { LancamentoRow } from "@/lib/supabase/types";
 
-export const PAGE_SIZE = 20;
-
 /** "2026-09" -> { de: "2026-09-01", ate: "2026-09-30" }. "todos" -> null
  * (sem filtro de data). */
 function rangeDoMes(mes: string): { de: string; ate: string } | null {
@@ -47,14 +45,15 @@ function ordenacaoParaColunas(
   }
 }
 
-export async function buscarLancamentos(
-  filtros: FiltroLancamentos,
-): Promise<{ linhas: LancamentoRow[]; total: number }> {
+/** Sem paginação — mostra tudo que bate com o filtro numa página só. O
+ * filtro de mês já limita o tamanho normal de uso; quando alguém escolhe
+ * "Todo o período" a lista pode crescer bastante, mas é a troca que foi
+ * pedida no lugar de paginar. */
+export async function buscarLancamentos(filtros: FiltroLancamentos): Promise<LancamentoRow[]> {
   const supabase = await createClient();
-  const offset = (filtros.pagina - 1) * PAGE_SIZE;
   const range = rangeDoMes(filtros.mes);
 
-  let query = supabase.from("lancamentos").select("*", { count: "exact" });
+  let query = supabase.from("lancamentos").select("*");
   if (range) query = query.gte("data_prevista", range.de).lte("data_prevista", range.ate);
   if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
@@ -65,9 +64,9 @@ export async function buscarLancamentos(
     query = query.order(coluna, { ascending: crescente });
   }
 
-  const { data, count, error } = await query.range(offset, offset + PAGE_SIZE - 1);
+  const { data, error } = await query;
   if (error) throw error;
-  return { linhas: data ?? [], total: count ?? 0 };
+  return data ?? [];
 }
 
 export type ParcelamentoAberto = {
@@ -115,25 +114,4 @@ export async function getParcelamentosAbertos(): Promise<ParcelamentoAberto[]> {
     });
   }
   return resultado.sort((a, b) => (a.proxima_data ?? "").localeCompare(b.proxima_data ?? ""));
-}
-
-/** Todas as linhas do período filtrado, sem paginação — para o export CSV. */
-export async function buscarLancamentosParaExport(filtros: FiltroLancamentos): Promise<LancamentoRow[]> {
-  const supabase = await createClient();
-  const range = rangeDoMes(filtros.mes);
-
-  let query = supabase.from("lancamentos").select("*");
-  if (range) query = query.gte("data_prevista", range.de).lte("data_prevista", range.ate);
-  if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
-  if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
-  if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
-  if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);
-
-  for (const { coluna, crescente } of ordenacaoParaColunas(filtros.ordenar, filtros.direcao)) {
-    query = query.order(coluna, { ascending: crescente });
-  }
-
-  const { data, error } = await query;
-  if (error) throw error;
-  return data ?? [];
 }

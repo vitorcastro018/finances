@@ -12,7 +12,7 @@ import { MesFilterSelect } from "@/features/lancamentos/mes-filter-select";
 import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
 import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { getCategorias } from "@/lib/data/categorias";
-import { buscarLancamentos, PAGE_SIZE } from "@/lib/data/lancamentos";
+import { buscarLancamentos } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { calcularSituacao } from "@/lib/situacao";
 import { currentMonthRef, formatMonthOptionLabel, monthRefToParam, shiftMonthRef } from "@/lib/timezone";
@@ -175,10 +175,7 @@ export default async function LancamentosPage({
   const rawParams = await searchParams;
   const filtros = filtroLancamentosSchema.parse(rawParams);
 
-  const [{ linhas, total }, categorias] = await Promise.all([
-    buscarLancamentos(filtros),
-    getCategorias(),
-  ]);
+  const [linhas, categorias] = await Promise.all([buscarLancamentos(filtros), getCategorias()]);
 
   const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
   // "categoria" não é uma coluna da tabela (é o nome da categoria ligada) —
@@ -197,7 +194,6 @@ export default async function LancamentosPage({
   const saidas = linhasOrdenadas.filter((l) => l.tipo === "saida");
   const entradas = linhasOrdenadas.filter((l) => l.tipo === "entrada");
 
-  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
   // Reflete o mês já resolvido (com o default aplicado) de volta pro link de
   // export, mesmo que a URL original não tivesse "mes".
   const paramsExport = new URLSearchParams({
@@ -294,28 +290,6 @@ export default async function LancamentosPage({
         filtros={filtros}
         mensagemVazio="Nenhuma entrada encontrada."
       />
-
-      {totalPaginas > 1 && (
-        <div className="flex items-center justify-center gap-2 text-sm">
-          {Array.from({ length: totalPaginas }, (_, i) => i + 1).map((pagina) => {
-            const params = new URLSearchParams({
-              ...Object.fromEntries(Object.entries(rawParams).filter(([k, v]) => v && k !== "pagina")),
-              mes: filtros.mes,
-            });
-            params.set("pagina", String(pagina));
-            const ativo = pagina === filtros.pagina;
-            return (
-              <Link
-                key={pagina}
-                href={`/lancamentos?${params.toString()}`}
-                className={ativo ? "font-semibold text-primary" : "text-muted-foreground"}
-              >
-                {pagina}
-              </Link>
-            );
-          })}
-        </div>
-      )}
     </div>
   );
 }
