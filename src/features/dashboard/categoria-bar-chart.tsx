@@ -21,7 +21,7 @@ export function CategoriaBarChart({ dados }: { dados: GastoPorCategoria[] }) {
         <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-border" />
         <XAxis
           dataKey="categoria"
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           tickLine={false}
           axisLine={false}
           interval={0}
@@ -30,7 +30,7 @@ export function CategoriaBarChart({ dados }: { dados: GastoPorCategoria[] }) {
           height={50}
         />
         <YAxis
-          tick={{ fontSize: 12 }}
+          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
           tickLine={false}
           axisLine={false}
           width={64}
