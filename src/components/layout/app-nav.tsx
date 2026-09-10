@@ -44,7 +44,7 @@ export function AppNav() {
               href={item.href}
               className={cn(
                 "flex items-center gap-2 rounded-md px-2 py-2 text-sm font-medium transition-colors",
-                active ? "bg-secondary text-secondary-foreground" : "text-muted-foreground hover:bg-secondary/60",
+                active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60",
               )}
             >
               <Icon className="size-4" />
