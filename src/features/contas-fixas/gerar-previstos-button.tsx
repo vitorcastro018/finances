@@ -40,7 +40,7 @@ export function GerarPrevistosButton() {
       <select
         value={mes}
         onChange={(e) => setMes(e.target.value)}
-        className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+        className="h-8 w-28 rounded-md border border-input bg-transparent px-2 text-sm sm:w-auto"
       >
         {opcoes.map((opcao) => (
           <option key={opcao.valor} value={opcao.valor}>
@@ -48,9 +48,9 @@ export function GerarPrevistosButton() {
           </option>
         ))}
       </select>
-      <Button variant="outline" disabled={pending} onClick={gerar}>
+      <Button variant="outline" size="sm" disabled={pending} onClick={gerar} aria-label="Gerar previstos">
         <RefreshCw className="size-4" />
-        Gerar previstos
+        <span className="hidden sm:inline">Gerar previstos</span>
       </Button>
     </div>
   );
