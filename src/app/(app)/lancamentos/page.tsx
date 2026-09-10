@@ -130,6 +130,57 @@ function LinhaLancamento({
   );
 }
 
+/** Versão em cartão da mesma linha, só pro celular — uma tabela de 8
+ * colunas não cabe numa tela estreita sem virar uma rolagem lateral
+ * ilegível. */
+function CardLancamento({
+  lancamento,
+  categorias,
+  nomeCategoria,
+}: {
+  lancamento: LancamentoRow;
+  categorias: CategoriaRow[];
+  nomeCategoria: Map<string, string>;
+}) {
+  return (
+    <div className="rounded-lg border bg-card p-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="truncate font-medium">{lancamento.nome}</p>
+          <p className="truncate text-xs text-muted-foreground">
+            {nomeCategoria.get(lancamento.categoria_id) ?? "—"} · {formatDate(lancamento.data_prevista)}
+          </p>
+        </div>
+        <SituacaoBadge situacao={calcularSituacao(lancamento.pago, lancamento.data_prevista)} />
+      </div>
+      <div className="mt-2 flex items-end justify-between gap-2">
+        <div>
+          <p className="text-lg font-semibold">{formatCurrency(lancamento.valor_previsto)}</p>
+          {lancamento.valor_pago !== null && lancamento.valor_pago !== lancamento.valor_previsto && (
+            <p className="text-xs text-muted-foreground">pago: {formatCurrency(lancamento.valor_pago)}</p>
+          )}
+        </div>
+        <p className="text-right text-xs text-muted-foreground capitalize">
+          {lancamento.metodo ?? "—"} · {lancamento.origem}
+        </p>
+      </div>
+      <div className="mt-3 flex justify-end gap-1 border-t pt-2">
+        <MarcarPagoDialog conta={lancamento} />
+        <LancamentoFormDialog
+          categorias={categorias}
+          lancamento={lancamento}
+          trigger={
+            <Button variant="ghost" size="sm">
+              Editar
+            </Button>
+          }
+        />
+        <ApagarLancamentoButton id={lancamento.id} nome={lancamento.nome} />
+      </div>
+    </div>
+  );
+}
+
 function SecaoLancamentos({
   titulo,
   linhas,
@@ -148,21 +199,33 @@ function SecaoLancamentos({
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold text-muted-foreground">{titulo}</h2>
-      <Table>
-        <CabecalhoLancamentos filtros={filtros} />
-        <TableBody>
-          {linhas.map((l) => (
-            <LinhaLancamento key={l.id} lancamento={l} categorias={categorias} nomeCategoria={nomeCategoria} />
-          ))}
-          {linhas.length === 0 && (
-            <TableRow>
-              <TableCell colSpan={8} className="text-center text-muted-foreground">
-                {mensagemVazio}
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+
+      {/* Celular: cartões (a tabela de 8 colunas não cabe numa tela estreita). */}
+      <div className="space-y-2 sm:hidden">
+        {linhas.map((l) => (
+          <CardLancamento key={l.id} lancamento={l} categorias={categorias} nomeCategoria={nomeCategoria} />
+        ))}
+        {linhas.length === 0 && <p className="text-center text-sm text-muted-foreground">{mensagemVazio}</p>}
+      </div>
+
+      {/* Desktop/tablet: tabela, com ordenação por coluna. */}
+      <div className="hidden sm:block">
+        <Table>
+          <CabecalhoLancamentos filtros={filtros} />
+          <TableBody>
+            {linhas.map((l) => (
+              <LinhaLancamento key={l.id} lancamento={l} categorias={categorias} nomeCategoria={nomeCategoria} />
+            ))}
+            {linhas.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center text-muted-foreground">
+                  {mensagemVazio}
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 }
@@ -206,24 +269,24 @@ export default async function LancamentosPage({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">Lançamentos</h1>
         <div className="flex gap-2">
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="sm" aria-label="Exportar CSV">
             <Link href={`/lancamentos/export?${paramsExport}`}>
-              <Download className="size-4" /> Exportar CSV
+              <Download className="size-4" /> <span className="hidden sm:inline">Exportar CSV</span>
             </Link>
           </Button>
           <ParcelamentoFormDialog
             categorias={categorias}
             trigger={
-              <Button variant="secondary" size="sm">
-                <CreditCard className="size-4" /> Parcelado
+              <Button variant="secondary" size="sm" aria-label="Parcelado">
+                <CreditCard className="size-4" /> <span className="hidden sm:inline">Parcelado</span>
               </Button>
             }
           />
           <LancamentoFormDialog
             categorias={categorias}
             trigger={
-              <Button size="sm">
-                <Plus className="size-4" /> Novo lançamento
+              <Button size="sm" aria-label="Novo lançamento">
+                <Plus className="size-4" /> <span className="hidden sm:inline">Novo lançamento</span>
               </Button>
             }
           />
@@ -268,7 +331,7 @@ export default async function LancamentosPage({
           <option value="false">Não pago</option>
         </select>
         <Input type="text" name="busca" defaultValue={filtros.busca} placeholder="Buscar…" className="col-span-2" />
-        <Button type="submit" variant="secondary">
+        <Button type="submit" variant="secondary" className="col-span-2 sm:col-span-1">
           Filtrar
         </Button>
       </form>
