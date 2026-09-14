@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatMonthOptionLabel, monthRefToParam, shiftMonthRef } from "@/lib/timezone";
 import type { FiltroLancamentos } from "@/lib/validation/lancamentos";
 import type { LancamentoRow } from "@/lib/supabase/types";
 
 /** "2026-09" -> { de: "2026-09-01", ate: "2026-09-30" }. "todos" -> null
  * (sem filtro de data). */
-function rangeDoMes(mes: string): { de: string; ate: string } | null {
+export function rangeDoMes(mes: string): { de: string; ate: string } | null {
   if (mes === "todos") return null;
   const [ano, mesNumero] = mes.split("-").map(Number);
   const ultimoDia = new Date(ano, mesNumero, 0).getDate();
@@ -67,6 +68,44 @@ export async function buscarLancamentos(filtros: FiltroLancamentos): Promise<Lan
   const { data, error } = await query;
   if (error) throw error;
   return data ?? [];
+}
+
+export type EvolucaoMes = { mes: string; entrada: number; saida: number };
+
+/** Entrada/saída realizadas (pago = true) dos últimos `meses` (padrão 6,
+ * incluindo o de referência) — a mesma definição de "realizado" já usada
+ * no card "Saldo do mês" (valor_pago quando tem, senão o previsto), só que
+ * mês a mês em vez de só o atual, pra dar pra ver tendência. Meses sem
+ * nenhum lançamento pago aparecem zerados, não somem do gráfico. */
+export async function getEvolucaoMensal(referenciaAtual: string, meses = 6): Promise<EvolucaoMes[]> {
+  const primeiraRef = shiftMonthRef(referenciaAtual, -(meses - 1));
+  const de = `${monthRefToParam(primeiraRef)}-01`;
+  const ate = rangeDoMes(monthRefToParam(referenciaAtual))!.ate;
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("lancamentos")
+    .select("tipo, valor_previsto, valor_pago, data_prevista")
+    .eq("pago", true)
+    .gte("data_prevista", de)
+    .lte("data_prevista", ate);
+  if (error) throw error;
+
+  const porMes = new Map<string, EvolucaoMes>();
+  for (let i = meses - 1; i >= 0; i--) {
+    const chave = monthRefToParam(shiftMonthRef(referenciaAtual, -i));
+    porMes.set(chave, { mes: formatMonthOptionLabel(chave), entrada: 0, saida: 0 });
+  }
+
+  for (const linha of data ?? []) {
+    const slot = porMes.get(linha.data_prevista.slice(0, 7));
+    if (!slot) continue;
+    const valor = linha.valor_pago ?? linha.valor_previsto;
+    if (linha.tipo === "entrada") slot.entrada += valor;
+    else slot.saida += valor;
+  }
+
+  return [...porMes.values()];
 }
 
 export type ParcelamentoAberto = {

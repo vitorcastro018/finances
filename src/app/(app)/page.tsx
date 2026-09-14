@@ -4,10 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { MonthSwitcher } from "@/components/layout/month-switcher";
-import { CategoriaBarChart, type GastoPorCategoria } from "@/features/dashboard/categoria-bar-chart";
+import { CategoriaBarChart, type ValorPorCategoria } from "@/features/dashboard/categoria-bar-chart";
+import { EvolucaoMensalChart } from "@/features/dashboard/evolucao-mensal-chart";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
 import { getCategorias } from "@/lib/data/categorias";
-import { getParcelamentosAbertos } from "@/lib/data/lancamentos";
+import { getEvolucaoMensal, getParcelamentosAbertos } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { parseMonthRef } from "@/lib/timezone";
@@ -22,10 +23,11 @@ export default async function DashboardPage({
   const referencia = parseMonthRef(ref);
 
   const supabase = await createClient();
-  const [{ data, error }, parcelamentos, categorias] = await Promise.all([
+  const [{ data, error }, parcelamentos, categorias, evolucaoMensal] = await Promise.all([
     supabase.rpc("contas_do_mes", { referencia }),
     getParcelamentosAbertos(),
     getCategorias(),
+    getEvolucaoMensal(referencia),
   ]);
   const categoriaPorId = new Map(categorias.map((c) => [c.id, c]));
   // `contas_do_mes` devolve a categoria exata do lançamento — pode já ser
@@ -55,35 +57,47 @@ export default async function DashboardPage({
   const saldoPrevisto = totalPrevistoReceber - totalPrevisto;
 
   // Agregado pela categoria "mãe" — sem isso, cada subcategoria virava uma
-  // barra própria, fragmentando o gráfico principal.
-  const gastoPorCategoria = new Map<string, GastoPorCategoria>();
-  for (const conta of saidas) {
-    const topo = resolverTopo(conta.categoria_id);
-    const chave = topo?.id ?? conta.categoria_id;
-    const atual = gastoPorCategoria.get(chave) ?? {
-      categoria: topo?.nome ?? conta.categoria_nome,
-      cor: topo?.cor ?? conta.categoria_cor,
-      total: 0,
-    };
-    atual.total += conta.valor_previsto;
-    gastoPorCategoria.set(chave, atual);
+  // barra própria, fragmentando o gráfico principal. Mesma lógica pras duas
+  // pontas (saída = gasto, entrada = receita), só trocando a lista de base.
+  function agruparPorCategoria(lista: ContaDoMesRow[]): Map<string, ValorPorCategoria> {
+    const porCategoria = new Map<string, ValorPorCategoria>();
+    for (const conta of lista) {
+      const topo = resolverTopo(conta.categoria_id);
+      const chave = topo?.id ?? conta.categoria_id;
+      const atual = porCategoria.get(chave) ?? {
+        categoria: topo?.nome ?? conta.categoria_nome,
+        cor: topo?.cor ?? conta.categoria_cor,
+        total: 0,
+      };
+      atual.total += conta.valor_previsto;
+      porCategoria.set(chave, atual);
+    }
+    return porCategoria;
   }
 
   // Só as contas lançadas numa subcategoria de verdade — mostra o detalhe
-  // que o gráfico acima esconde ao agregar no topo.
-  const gastoPorSubcategoria = new Map<string, GastoPorCategoria>();
-  for (const conta of saidas) {
-    const categoria = categoriaPorId.get(conta.categoria_id);
-    if (!categoria?.categoria_pai_id) continue;
-    const pai = categoriaPorId.get(categoria.categoria_pai_id);
-    const atual = gastoPorSubcategoria.get(categoria.id) ?? {
-      categoria: pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome,
-      cor: categoria.cor,
-      total: 0,
-    };
-    atual.total += conta.valor_previsto;
-    gastoPorSubcategoria.set(categoria.id, atual);
+  // que o gráfico por categoria esconde ao agregar no topo.
+  function agruparPorSubcategoria(lista: ContaDoMesRow[]): Map<string, ValorPorCategoria> {
+    const porSubcategoria = new Map<string, ValorPorCategoria>();
+    for (const conta of lista) {
+      const categoria = categoriaPorId.get(conta.categoria_id);
+      if (!categoria?.categoria_pai_id) continue;
+      const pai = categoriaPorId.get(categoria.categoria_pai_id);
+      const atual = porSubcategoria.get(categoria.id) ?? {
+        categoria: pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome,
+        cor: categoria.cor,
+        total: 0,
+      };
+      atual.total += conta.valor_previsto;
+      porSubcategoria.set(categoria.id, atual);
+    }
+    return porSubcategoria;
   }
+
+  const gastoPorCategoria = agruparPorCategoria(saidas);
+  const gastoPorSubcategoria = agruparPorSubcategoria(saidas);
+  const receitaPorCategoria = agruparPorCategoria(entradas);
+  const receitaPorSubcategoria = agruparPorSubcategoria(entradas);
 
   const proximosVencimentos = contas
     .filter((c) => !c.pago)
@@ -157,23 +171,65 @@ export default async function DashboardPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Gasto por categoria</CardTitle>
+          <CardTitle>Entradas x saídas — últimos 6 meses</CardTitle>
         </CardHeader>
         <CardContent>
-          <CategoriaBarChart dados={[...gastoPorCategoria.values()]} />
+          <EvolucaoMensalChart dados={evolucaoMensal} />
         </CardContent>
       </Card>
 
-      {gastoPorSubcategoria.size > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Gasto por subcategoria</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <CategoriaBarChart dados={[...gastoPorSubcategoria.values()]} />
-          </CardContent>
-        </Card>
-      )}
+      {/* Saída e entrada sempre em colunas separadas — nunca no mesmo
+          gráfico, pra não misturar as duas pontas. */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground">Saídas</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Gasto por categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CategoriaBarChart dados={[...gastoPorCategoria.values()]} mensagemVazio="Nenhum gasto neste mês." />
+            </CardContent>
+          </Card>
+
+          {gastoPorSubcategoria.size > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Gasto por subcategoria</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoriaBarChart dados={[...gastoPorSubcategoria.values()]} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+
+        <div className="space-y-4">
+          <h2 className="text-sm font-semibold text-muted-foreground">Entradas</h2>
+          <Card>
+            <CardHeader>
+              <CardTitle>Receita por categoria</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <CategoriaBarChart
+                dados={[...receitaPorCategoria.values()]}
+                mensagemVazio="Nenhuma receita neste mês."
+              />
+            </CardContent>
+          </Card>
+
+          {receitaPorSubcategoria.size > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Receita por subcategoria</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CategoriaBarChart dados={[...receitaPorSubcategoria.values()]} />
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
