@@ -14,6 +14,10 @@ export const lancamentoSchema = z.object({
     .max(60)
     .optional()
     .transform((value) => (value ? value : null)),
+  // Só o formulário de criação manda isso (checkbox "Já paguei/recebi") —
+  // editarLancamento ignora o campo pra não pisar num pagamento já
+  // registrado com valor/data reais via marcarComoPago.
+  pago: z.boolean().optional().default(false),
 });
 
 // z.input, pelo mesmo motivo de ContaFixaInput: valor_previsto usa z.coerce.
@@ -77,7 +81,8 @@ const filtroLancamentosSchemaBase = z.object({
   tipo: z.enum(["entrada", "saida"]).optional(),
   pago: z.enum(["true", "false"]).optional(),
   busca: z.string().trim().max(120).optional(),
-  ordenar: z.enum(COLUNAS_ORDENAVEIS).default("data"),
+  // Padrão pedido: maior valor primeiro (valor + desc).
+  ordenar: z.enum(COLUNAS_ORDENAVEIS).default("valor"),
   direcao: z.enum(["asc", "desc"]).default("desc"),
 });
 
