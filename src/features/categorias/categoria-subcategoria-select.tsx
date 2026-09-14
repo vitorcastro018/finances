@@ -5,6 +5,7 @@ import { useMemo } from "react";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaQuickCreate } from "@/features/categorias/categoria-quick-create";
+import { SubcategoriaQuickCreate } from "@/features/categorias/subcategoria-quick-create";
 import type { CategoriaRow, TipoLancamento } from "@/lib/supabase/types";
 
 const SEM_SUBCATEGORIA = "__nenhuma__";
@@ -24,9 +25,10 @@ type Props = {
 };
 
 /** Categoria e subcategoria em dois <select> encadeados: escolhe a
- * categoria primeiro, e só aparece o de subcategoria se aquela categoria
- * tiver alguma. Selecionar uma subcategoria usa o id dela como categoria_id
- * do lançamento; sem isso, usa o id da categoria de topo mesmo. */
+ * categoria primeiro, e o de subcategoria aparece assim que ela é
+ * escolhida (mesmo sem nenhuma ainda — o "+" ao lado cria uma na hora).
+ * Selecionar uma subcategoria usa o id dela como categoria_id do
+ * lançamento; sem isso, usa o id da categoria de topo mesmo. */
 export function CategoriaSubcategoriaSelect({ categorias, value, onChange, tipo, onCategoriaCriada }: Props) {
   const topo = useMemo(() => categorias.filter((c) => !c.categoria_pai_id), [categorias]);
   const subcategoriasPorPai = useMemo(() => {
@@ -43,6 +45,7 @@ export function CategoriaSubcategoriaSelect({ categorias, value, onChange, tipo,
   const selecionada = categorias.find((c) => c.id === value);
   // Se o valor atual já é uma subcategoria, a categoria "de cima" é o pai dela.
   const topoId = selecionada?.categoria_pai_id ?? selecionada?.id ?? "";
+  const topoSelecionada = topo.find((c) => c.id === topoId);
   const subDaCategoria = subcategoriasPorPai.get(topoId) ?? [];
   const subId = selecionada?.categoria_pai_id ? selecionada.id : SEM_SUBCATEGORIA;
 
@@ -67,25 +70,30 @@ export function CategoriaSubcategoriaSelect({ categorias, value, onChange, tipo,
         </div>
       </div>
 
-      {subDaCategoria.length > 0 && (
+      {topoSelecionada && (
         <div className="space-y-2">
           <Label>Subcategoria</Label>
-          <Select
-            value={subId}
-            onValueChange={(v) => onChange(v === SEM_SUBCATEGORIA ? topoId : v)}
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={SEM_SUBCATEGORIA}>Nenhuma</SelectItem>
-              {subDaCategoria.map((s) => (
-                <SelectItem key={s.id} value={s.id}>
-                  {s.nome}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="flex gap-2">
+            <Select
+              value={subId}
+              onValueChange={(v) => onChange(v === SEM_SUBCATEGORIA ? topoId : v)}
+            >
+              <SelectTrigger className="flex-1">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_SUBCATEGORIA}>Nenhuma</SelectItem>
+                {subDaCategoria.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {onCategoriaCriada && (
+              <SubcategoriaQuickCreate categoriaPai={topoSelecionada} onCreated={onCategoriaCriada} />
+            )}
+          </div>
         </div>
       )}
     </div>
