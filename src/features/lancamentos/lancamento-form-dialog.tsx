@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition, type ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,9 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   const [valor, setValor] = useState(lancamento ? String(lancamento.valor_previsto) : "");
   const [data, setData] = useState(lancamento?.data_prevista ?? dataPrevistaPadrao ?? todayInAppTimezone());
   const [metodo, setMetodo] = useState(lancamento?.metodo ?? "");
+  // Só existe na criação — editar não toca em pago/valor_pago/data_pagamento
+  // (isso é papel do "Marcar como pago" da lista, que sabe o valor real).
+  const [pago, setPago] = useState(false);
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
   // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
@@ -53,6 +57,7 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
       valor_previsto: valor,
       data_prevista: data,
       metodo,
+      ...(!lancamento && { pago }),
     };
     startTransition(async () => {
       const result = lancamento
@@ -67,6 +72,7 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
       if (!lancamento) {
         setNome("");
         setValor("");
+        setPago(false);
       }
     });
   }
@@ -130,6 +136,13 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
               <Input id="metodo" value={metodo ?? ""} onChange={(e) => setMetodo(e.target.value)} placeholder="Pix, cartão…" />
             </div>
           </div>
+
+          {!lancamento && (
+            <label className="flex items-center gap-2 text-sm">
+              <Checkbox checked={pago} onCheckedChange={(v) => setPago(v === true)} />
+              {tipo === "entrada" ? "Já recebi" : "Já paguei"}
+            </label>
+          )}
 
           {erro && <p className="text-sm text-destructive">{erro}</p>}
         </div>

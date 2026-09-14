@@ -22,13 +22,22 @@ function revalidarTelas() {
   revalidatePath("/lancamentos");
 }
 
-/** Usado tanto por "adicionar conta avulsa deste mês" quanto pelo CRUD de /lancamentos. */
+/** Usado tanto por "adicionar conta avulsa deste mês" quanto pelo CRUD de /lancamentos.
+ * Marcado como já pago na criação (checkbox do formulário) usa o próprio
+ * valor/data previstos como valor/data reais — pra ajustar pra um valor
+ * diferente depois, é só usar "Marcar como pago" na lista mesmo. */
 export async function criarLancamento(input: LancamentoInput): Promise<ActionResult> {
   const parsed = lancamentoSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
+  const { pago, ...resto } = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.from("lancamentos").insert(parsed.data);
+  const { error } = await supabase.from("lancamentos").insert({
+    ...resto,
+    pago,
+    valor_pago: pago ? resto.valor_previsto : null,
+    data_pagamento: pago ? resto.data_prevista : null,
+  });
   if (error) return { error: error.message };
 
   revalidarTelas();
@@ -39,8 +48,15 @@ export async function editarLancamento(id: string, input: LancamentoInput): Prom
   const parsed = lancamentoSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
+  // pago/valor_pago/data_pagamento ficam de fora da edição — quem cuida
+  // disso é o "Marcar como pago"/"Desmarcar" da lista, que sabe o valor e
+  // a data reais; editar não deve pisar num pagamento já registrado.
+  const { nome, tipo, categoria_id, valor_previsto, data_prevista, metodo } = parsed.data;
   const supabase = await createClient();
-  const { error } = await supabase.from("lancamentos").update(parsed.data).eq("id", id);
+  const { error } = await supabase
+    .from("lancamentos")
+    .update({ nome, tipo, categoria_id, valor_previsto, data_prevista, metodo })
+    .eq("id", id);
   if (error) return { error: error.message };
 
   revalidarTelas();
