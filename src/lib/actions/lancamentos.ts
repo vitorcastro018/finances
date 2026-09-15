@@ -182,7 +182,12 @@ export async function enviarAnexoLancamento(id: string, arquivo: File): Promise<
     .select("data_prevista, anexo_path")
     .eq("id", id)
     .single();
-  if (erroBusca || !lancamento) return { error: "Lançamento não encontrado." };
+  // Separado do "não encontrado": um erro de verdade aqui (ex.: coluna
+  // anexo_path não existe, porque a migration 08_anexos.sql ainda não foi
+  // aplicada) não pode virar essa mensagem genérica — sem o motivo real,
+  // fica impossível saber que falta rodar a migration.
+  if (erroBusca) return { error: erroBusca.message };
+  if (!lancamento) return { error: "Lançamento não encontrado." };
 
   const caminho = caminhoAnexo(auth.user.id, id, lancamento.data_prevista, arquivo.name);
   const { error: erroUpload } = await supabase.storage
@@ -216,7 +221,8 @@ export async function removerAnexoLancamento(id: string): Promise<ActionResult> 
     .select("anexo_path")
     .eq("id", id)
     .single();
-  if (erroBusca || !lancamento) return { error: "Lançamento não encontrado." };
+  if (erroBusca) return { error: erroBusca.message };
+  if (!lancamento) return { error: "Lançamento não encontrado." };
 
   if (lancamento.anexo_path) {
     await supabase.storage.from(BUCKET_ANEXOS).remove([lancamento.anexo_path]);

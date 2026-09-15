@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useState, useTransition, type ReactNode } from "react";
+import { FileText, Paperclip } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -55,6 +56,21 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   const [listaCategorias, setListaCategorias] = useState(categorias);
 
   const categoriasDoTipo = useMemo(() => listaCategorias.filter((c) => c.tipo === tipo), [listaCategorias, tipo]);
+  // Prévia local (não sobe nada, só mostra) do arquivo escolhido, quando é
+  // imagem — dá pra ver que a foto certa foi selecionada antes de salvar.
+  // Derivado com useMemo (não useState): criar a blob: URL não é um efeito
+  // colateral que precise de setState, só uma conta a partir do arquivo
+  // atual — só a limpeza (revogar a URL) precisa de useEffect de verdade.
+  const previewUrl = useMemo(() => {
+    if (!arquivo || !arquivo.type.startsWith("image/")) return null;
+    return URL.createObjectURL(arquivo);
+  }, [arquivo]);
+
+  useEffect(() => {
+    return () => {
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [previewUrl]);
   // Só mostra o anexo já salvo enquanto ninguém pediu pra remover — depois
   // disso vira "sem anexo" na tela, mesmo antes de salvar.
   const anexoAtual =
@@ -213,16 +229,41 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
           <div className="space-y-2">
             <Label htmlFor="anexo">Comprovante (opcional)</Label>
             {anexoAtual ? (
-              <div className="flex items-center justify-between gap-2 rounded-md border pr-1">
-                <AnexoLink anexoPath={anexoAtual.path} nome={anexoAtual.nome} />
+              <div className="flex items-center gap-3 rounded-md border p-3">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-md bg-muted">
+                  <Paperclip className="size-5 text-muted-foreground" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <AnexoLink anexoPath={anexoAtual.path} nome={anexoAtual.nome} />
+                  <p className="text-xs text-muted-foreground">Clique pra visualizar</p>
+                </div>
                 <Button type="button" variant="ghost" size="sm" onClick={() => setRemoverAnexoExistente(true)}>
                   Remover
                 </Button>
               </div>
             ) : (
-              <Input id="anexo" type="file" accept={ANEXO_ACCEPT} onChange={escolherArquivo} />
+              <label
+                htmlFor="anexo"
+                className="flex min-h-28 cursor-pointer flex-col items-center justify-center gap-2 rounded-md border border-dashed p-4 text-center transition-colors hover:bg-accent/40"
+              >
+                {previewUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- prévia local (blob: da própria seleção), não faz sentido passar pelo otimizador de imagem.
+                  <img src={previewUrl} alt="" className="max-h-24 rounded-md object-contain" />
+                ) : arquivo ? (
+                  <>
+                    <FileText className="size-6 text-muted-foreground" />
+                    <span className="max-w-full truncate text-sm">{arquivo.name}</span>
+                  </>
+                ) : (
+                  <>
+                    <Paperclip className="size-6 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Clique pra escolher uma foto ou PDF</span>
+                  </>
+                )}
+                <input id="anexo" type="file" accept={ANEXO_ACCEPT} onChange={escolherArquivo} className="sr-only" />
+              </label>
             )}
-            {arquivo && <p className="text-xs text-muted-foreground">Novo arquivo: {arquivo.name}</p>}
+            {arquivo && previewUrl && <p className="truncate text-xs text-muted-foreground">{arquivo.name}</p>}
             {erroArquivo && <p className="text-sm text-destructive">{erroArquivo}</p>}
           </div>
 
