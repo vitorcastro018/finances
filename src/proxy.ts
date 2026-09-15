@@ -27,8 +27,10 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Roda em tudo, exceto assets estáticos e a otimização de imagem — sem
-    // isso, CSS/JS/imagens ficam bloqueados atrás do redirect de login.
-    "/((?!_next/static|_next/image|favicon.ico).*)",
+    // Roda em tudo, exceto assets estáticos, otimização de imagem e a API
+    // (/api/**) — essa não usa cookie de sessão, tem autenticação própria
+    // por API key (ver src/lib/api/auth.ts), então cairia sempre no
+    // redirect de login se passasse por aqui.
+    "/((?!_next/static|_next/image|favicon.ico|api).*)",
   ],
 };
