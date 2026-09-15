@@ -17,7 +17,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
-import { criarLancamento, editarLancamento } from "@/lib/actions/lancamentos";
+import { AnexoLink } from "@/features/lancamentos/anexo-link";
+import { criarLancamento, editarLancamento, enviarAnexoLancamento, removerAnexoLancamento } from "@/lib/actions/lancamentos";
+import { ANEXO_ACCEPT, validarAnexo } from "@/lib/anexos";
 import { todayInAppTimezone } from "@/lib/timezone";
 import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
 
@@ -40,6 +42,12 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   // Só existe na criação — editar não toca em pago/valor_pago/data_pagamento
   // (isso é papel do "Marcar como pago" da lista, que sabe o valor real).
   const [pago, setPago] = useState(false);
+  // Comprovante: arquivo novo escolhido (anexar pela primeira vez ou trocar
+  // um já existente) e o pedido de remover o que já está anexado — os dois
+  // só se efetivam de verdade no submit, junto com o resto do formulário.
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [removerAnexoExistente, setRemoverAnexoExistente] = useState(false);
+  const [erroArquivo, setErroArquivo] = useState<string | undefined>();
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
   // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
@@ -47,6 +55,30 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   const [listaCategorias, setListaCategorias] = useState(categorias);
 
   const categoriasDoTipo = useMemo(() => listaCategorias.filter((c) => c.tipo === tipo), [listaCategorias, tipo]);
+  // Só mostra o anexo já salvo enquanto ninguém pediu pra remover — depois
+  // disso vira "sem anexo" na tela, mesmo antes de salvar.
+  const anexoAtual =
+    lancamento?.anexo_path && !removerAnexoExistente
+      ? { path: lancamento.anexo_path, nome: lancamento.anexo_nome }
+      : null;
+
+  function escolherArquivo(e: React.ChangeEvent<HTMLInputElement>) {
+    const escolhido = e.target.files?.[0] ?? null;
+    if (!escolhido) {
+      setArquivo(null);
+      setErroArquivo(undefined);
+      return;
+    }
+    const erroValidacao = validarAnexo(escolhido);
+    if (erroValidacao) {
+      setErroArquivo(erroValidacao);
+      setArquivo(null);
+      e.target.value = "";
+      return;
+    }
+    setErroArquivo(undefined);
+    setArquivo(escolhido);
+  }
 
   function submeter() {
     setErro(undefined);
@@ -62,13 +94,34 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
     startTransition(async () => {
       const result = lancamento
         ? await editarLancamento(lancamento.id, input)
-        : await criarLancamento(input);
+        : await criarLancamento(input, arquivo ?? undefined);
       if (result.error) {
         setErro(result.error);
         return;
       }
+
+      // Na edição o anexo é tratado à parte de editarLancamento — arquivo
+      // novo (anexar ou trocar) tem prioridade sobre um pedido de remover.
+      if (lancamento) {
+        if (arquivo) {
+          const resultAnexo = await enviarAnexoLancamento(lancamento.id, arquivo);
+          if (resultAnexo.error) {
+            setErro(resultAnexo.error);
+            return;
+          }
+        } else if (removerAnexoExistente) {
+          const resultRemover = await removerAnexoLancamento(lancamento.id);
+          if (resultRemover.error) {
+            setErro(resultRemover.error);
+            return;
+          }
+        }
+      }
+
       toast.success(lancamento ? "Lançamento atualizado." : "Lançamento criado.");
       setOpen(false);
+      setArquivo(null);
+      setRemoverAnexoExistente(false);
       if (!lancamento) {
         setNome("");
         setValor("");
@@ -78,7 +131,20 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog
+      open={open}
+      onOpenChange={(novoAberto) => {
+        setOpen(novoAberto);
+        // Reabrir sempre parte de "nenhuma mudança de anexo pendente" — sem
+        // isso, cancelar depois de clicar em "Remover" deixava a tela
+        // mostrando "sem anexo" da próxima vez, mesmo sem ter salvo nada.
+        if (novoAberto) {
+          setArquivo(null);
+          setRemoverAnexoExistente(false);
+          setErroArquivo(undefined);
+        }
+      }}
+    >
       <DialogTrigger asChild>{trigger}</DialogTrigger>
       <DialogContent>
         <DialogHeader>
@@ -143,6 +209,22 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
               {tipo === "entrada" ? "Já recebi" : "Já paguei"}
             </label>
           )}
+
+          <div className="space-y-2">
+            <Label htmlFor="anexo">Comprovante (opcional)</Label>
+            {anexoAtual ? (
+              <div className="flex items-center justify-between gap-2 rounded-md border pr-1">
+                <AnexoLink anexoPath={anexoAtual.path} nome={anexoAtual.nome} />
+                <Button type="button" variant="ghost" size="sm" onClick={() => setRemoverAnexoExistente(true)}>
+                  Remover
+                </Button>
+              </div>
+            ) : (
+              <Input id="anexo" type="file" accept={ANEXO_ACCEPT} onChange={escolherArquivo} />
+            )}
+            {arquivo && <p className="text-xs text-muted-foreground">Novo arquivo: {arquivo.name}</p>}
+            {erroArquivo && <p className="text-sm text-destructive">{erroArquivo}</p>}
+          </div>
 
           {erro && <p className="text-sm text-destructive">{erro}</p>}
         </div>

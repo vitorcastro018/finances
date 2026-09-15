@@ -96,6 +96,8 @@ export type Database = {
       };
       lancamentos: {
         Row: {
+          anexo_nome: string | null;
+          anexo_path: string | null;
           categoria_id: string;
           contas_fixa_id: string | null;
           created_at: string;
@@ -116,6 +118,8 @@ export type Database = {
           valor_previsto: number;
         };
         Insert: {
+          anexo_nome?: string | null;
+          anexo_path?: string | null;
           categoria_id: string;
           contas_fixa_id?: string | null;
           created_at?: string;
@@ -136,6 +140,8 @@ export type Database = {
           valor_previsto: number;
         };
         Update: {
+          anexo_nome?: string | null;
+          anexo_path?: string | null;
           categoria_id?: string;
           contas_fixa_id?: string | null;
           created_at?: string;
