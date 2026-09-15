@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SituacaoBadge } from "@/components/ui/situacao-badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { AnexoLink } from "@/features/lancamentos/anexo-link";
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
@@ -103,7 +104,14 @@ function LinhaLancamento({
         <SituacaoBadge situacao={calcularSituacao(lancamento.pago, lancamento.data_prevista)} />
       </TableCell>
       <TableCell>{formatDate(lancamento.data_prevista)}</TableCell>
-      <TableCell className="font-medium">{lancamento.nome}</TableCell>
+      <TableCell className="font-medium">
+        <div className="flex items-center gap-1">
+          <span className="truncate">{lancamento.nome}</span>
+          {lancamento.anexo_path && (
+            <AnexoLink anexoPath={lancamento.anexo_path} nome={lancamento.anexo_nome} compact />
+          )}
+        </div>
+      </TableCell>
       <TableCell>{nomeCategoria.get(lancamento.categoria_id) ?? "—"}</TableCell>
       <TableCell>
         {formatCurrency(lancamento.valor_previsto)}
@@ -146,7 +154,12 @@ function CardLancamento({
     <div className="rounded-lg border bg-card p-3">
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate font-medium">{lancamento.nome}</p>
+          <div className="flex items-center gap-1">
+            <p className="truncate font-medium">{lancamento.nome}</p>
+            {lancamento.anexo_path && (
+              <AnexoLink anexoPath={lancamento.anexo_path} nome={lancamento.anexo_nome} compact />
+            )}
+          </div>
           <p className="truncate text-xs text-muted-foreground">
             {nomeCategoria.get(lancamento.categoria_id) ?? "—"} · {formatDate(lancamento.data_prevista)}
           </p>
