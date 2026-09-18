@@ -4,19 +4,12 @@ import { z } from "zod";
 import { verificarApiKey } from "@/lib/api/auth";
 import { resolverCategoriaPorNome } from "@/lib/api/categorias";
 import { lancamentoParaApi } from "@/lib/api/lancamentos";
+import { semCamposVazios } from "@/lib/api/query-utils";
 import { rangeDoMes } from "@/lib/data/lancamentos";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { currentMonthRef, monthRefToParam, todayInAppTimezone } from "@/lib/timezone";
 import type { Database } from "@/lib/supabase/types";
-
-// Mesmo truque do filtro de /lancamentos: um cliente HTTP (n8n incluído)
-// pode mandar parâmetro vazio ("") em vez de simplesmente omitir — trata
-// como "não veio" antes de validar.
-function semCamposVazios(valor: unknown) {
-  if (typeof valor !== "object" || valor === null) return valor;
-  return Object.fromEntries(Object.entries(valor as Record<string, unknown>).filter(([, v]) => v !== ""));
-}
 
 const filtroApiSchema = z.preprocess(
   semCamposVazios,

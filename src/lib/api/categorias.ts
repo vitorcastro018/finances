@@ -34,3 +34,34 @@ export async function resolverCategoriaPorNome(
     status: 400,
   };
 }
+
+/** Como `resolverCategoriaPorNome`, mas pra achar o PAI ao criar uma
+ * subcategoria — `tipo` é opcional aqui porque o nome de uma categoria de
+ * topo já é único o bastante pra achar sozinho, sem o agente precisar saber
+ * de antemão se ela é de entrada ou saída. Devolve também `tipo`/`cor`, que
+ * a subcategoria nova herda do pai (mesma regra do SubcategoriaFormDialog
+ * na tela: tipo e cor não são escolhidos à parte). */
+export async function buscarCategoriaTopoPorNome(
+  admin: SupabaseClient<Database>,
+  nome: string,
+  tipo?: TipoLancamento,
+): Promise<{ id: string; nome: string; tipo: TipoLancamento; cor: string } | { erro: string; status: 400 | 500 }> {
+  let query = admin
+    .from("categorias")
+    .select("id, nome, tipo, cor")
+    .eq("user_id", env.APP_USER_ID!)
+    .is("categoria_pai_id", null);
+  if (tipo) query = query.eq("tipo", tipo);
+  const { data, error } = await query;
+  if (error) return { erro: error.message, status: 500 };
+
+  const alvo = nome.trim().toLowerCase();
+  const encontrada = data.find((c) => c.nome.toLowerCase() === alvo);
+  if (encontrada) return encontrada;
+
+  const disponiveis = data.map((c) => c.nome).join(", ") || "nenhuma cadastrada";
+  return {
+    erro: `Categoria "${nome}" não encontrada${tipo ? ` entre as de ${tipo}` : ""}. Disponíveis: ${disponiveis}.`,
+    status: 400,
+  };
+}
