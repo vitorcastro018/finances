@@ -131,8 +131,61 @@ Resposta `200`:
 }
 ```
 
+### `GET /api/categorias` — listar (com subcategorias já aninhadas)
+
+```bash
+curl "https://SEU-APP.vercel.app/api/categorias?tipo=saida" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+`tipo` (`entrada` \| `saida`) é opcional — sem ele, lista os dois.
+
+Resposta `200`: categorias de topo, cada uma já com suas subcategorias:
+
+```json
+[
+  {
+    "id": "...",
+    "nome": "Despesas Fixas",
+    "tipo": "saida",
+    "cor": "#64748b",
+    "subcategorias": [{ "id": "...", "nome": "Aluguel", "cor": "#64748b" }]
+  }
+]
+```
+
+### `POST /api/categorias` — criar categoria ou subcategoria
+
+Categoria de topo — `tipo` obrigatório:
+
+```bash
+curl -X POST https://SEU-APP.vercel.app/api/categorias \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"nome": "Lazer", "tipo": "saida"}'
+```
+
+Subcategoria — `categoria_pai` é o **nome** de uma categoria de topo já existente; `tipo` e `cor` são sempre herdados dela (mesma regra da tela: não dá pra escolher tipo/cor de uma subcategoria à parte):
+
+```bash
+curl -X POST https://SEU-APP.vercel.app/api/categorias \
+  -H "Authorization: Bearer $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"nome": "Cinema", "categoria_pai": "Lazer"}'
+```
+
+- `cor` (`#rrggbb`) é opcional e só vale pra categoria de topo — numa subcategoria é ignorado (vem do pai).
+- Nome duplicado (mesmo entre categoria e subcategoria — o nome é único por conta, não por tipo) → `409`.
+- `categoria_pai` que não existir → `400`, listando as categorias de topo disponíveis.
+
+Resposta `201`:
+
+```json
+{ "id": "...", "nome": "Cinema", "tipo": "saida", "cor": "#64748b", "categoria_pai": "Lazer" }
+```
+
 ## O que não tem (por enquanto)
 
 Anexo de comprovante, parcelamento e contas fixas não têm endpoint — só o
-que foi pedido pro agente (criar lançamento, consultar indicadores,
-listar/buscar, marcar como pago). Dá pra adicionar do mesmo jeito depois.
+que foi pedido pro agente (criar/listar lançamentos e categorias, consultar
+indicadores, marcar como pago). Dá pra adicionar do mesmo jeito depois.
