@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 
 const SPLASH_DURATION_MS = 3300;
 
-/** Coin & sprout intro animation, shown once while the app boots up. */
+/** Coin & sprout intro animation, shown once right after login. */
 export function SplashScreen() {
   const [visible, setVisible] = useState(true);
 
@@ -50,7 +50,7 @@ export function SplashScreen() {
           </g>
         </g>
       </svg>
-      <span className="splash-word text-xl font-semibold text-foreground">Finanças</span>
+      <span className="splash-word text-xl font-semibold text-foreground">Finances</span>
     </div>
   );
 }

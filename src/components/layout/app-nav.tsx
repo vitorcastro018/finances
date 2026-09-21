@@ -34,7 +34,7 @@ export function AppNav() {
 
       {/* Desktop: sidebar. */}
       <nav className="hidden w-56 shrink-0 border-r p-4 sm:flex sm:flex-col sm:gap-1">
-        <span className="mb-4 px-2 text-lg font-semibold">Finanças</span>
+        <span className="mb-4 px-2 text-lg font-semibold">Finances</span>
         {navItems.map((item) => {
           const active = pathname === item.href;
           const Icon = item.icon;

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { LogOut, User } from "lucide-react";
 
 import { AppNav } from "@/components/layout/app-nav";
+import { SplashScreen } from "@/components/layout/splash-screen";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -42,13 +43,14 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-screen flex-col sm:flex-row">
+      <SplashScreen />
       <AppNav />
       <div className="flex flex-1 flex-col">
         {/* Celular: barra fixa só com a marca e o menu de perfil — a
             navegação já mora na barra inferior (AppNav), então não
             repete aqui. */}
         <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background px-4 py-3 sm:hidden">
-          <span className="text-base font-semibold">Finanças</span>
+          <span className="text-base font-semibold">Finances</span>
           <MenuPerfil email={user?.email} />
         </header>
         <header className="hidden items-center justify-end border-b px-6 py-3 sm:flex">
