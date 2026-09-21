@@ -31,14 +31,32 @@ const SEM_CARTAO = "__nenhum__";
 type Props = {
   categorias: CategoriaRow[];
   cartoes: CartaoRow[];
-  trigger: ReactNode;
+  /** Sem trigger, o diálogo só abre por controle externo (open/onOpenChange)
+   * — caso da linha de /lancamentos, onde clicar em qualquer lugar da linha
+   * abre a edição, sem precisar de um botão dedicado. */
+  trigger?: ReactNode;
   /** Presente = editar; ausente = criar. */
   lancamento?: LancamentoRow;
   dataPrevistaPadrao?: string;
+  /** Controle externo do aberto/fechado — quando ausente, o componente
+   * controla seu próprio estado (caso dos botões "Novo lançamento"/
+   * "Parcelado", que só abrem via `trigger`). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
-export function LancamentoFormDialog({ categorias, cartoes, trigger, lancamento, dataPrevistaPadrao }: Props) {
-  const [open, setOpen] = useState(false);
+export function LancamentoFormDialog({
+  categorias,
+  cartoes,
+  trigger,
+  lancamento,
+  dataPrevistaPadrao,
+  open: openControlado,
+  onOpenChange: onOpenChangeControlado,
+}: Props) {
+  const [openInterno, setOpenInterno] = useState(false);
+  const open = openControlado ?? openInterno;
+  const setOpen = onOpenChangeControlado ?? setOpenInterno;
   const [nome, setNome] = useState(lancamento?.nome ?? "");
   const [tipo, setTipo] = useState<TipoLancamento>(lancamento?.tipo ?? "saida");
   const [categoriaId, setCategoriaId] = useState(lancamento?.categoria_id ?? "");
@@ -187,7 +205,7 @@ export function LancamentoFormDialog({ categorias, cartoes, trigger, lancamento,
         }
       }}
     >
-      <DialogTrigger asChild>{trigger}</DialogTrigger>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{lancamento ? "Editar lançamento" : "Novo lançamento"}</DialogTitle>
