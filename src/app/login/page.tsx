@@ -6,7 +6,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="space-y-1 text-center">
           <h1 className="text-2xl font-semibold">Finanças</h1>
-          <p className="text-sm text-muted-foreground">Entre com seu e-mail e senha.</p>
+          <p className="text-sm text-muted-foreground">Entre com seu e-mail ou usuário e senha.</p>
         </div>
         <LoginForm />
       </div>
