@@ -44,15 +44,17 @@ curl -X POST https://SEU-APP.vercel.app/api/lancamentos \
     "valor_previsto": 187.40,
     "data_prevista": "2026-09-15",
     "metodo": "Pix",
-    "pago": false
+    "pago": false,
+    "cartao": "Nubank"
   }'
 ```
 
 - `nome`, `tipo` (`"entrada"` ou `"saida"`), `categoria` (**nome**, não id — precisa já existir) e `valor_previsto` são obrigatórios.
-- `data_prevista` (`yyyy-mm-dd`) é opcional — sem ela, usa hoje.
+- `data_prevista` (`yyyy-mm-dd`) é opcional — sem ela, usa hoje. Sem `cartao`, é a data de vencimento (ou compra à vista). **Com `cartao`, é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário.
 - `metodo` é opcional.
-- `pago` é opcional (padrão `false`) — `true` já lança como pago, usando o próprio valor/data previstos como reais (igual o checkbox "Já paguei" do formulário).
-- Se `categoria` não bater com nenhuma categoria de topo cadastrada (comparação sem diferenciar maiúscula/minúscula), a resposta `400` lista as categorias disponíveis daquele tipo.
+- `pago` é opcional (padrão `false`) — `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais (igual o checkbox "Já paguei" do formulário).
+- `cartao` é opcional — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes` abaixo). Sem ele, o lançamento não fica ligado a nenhum cartão.
+- Se `categoria` não bater com nenhuma categoria de topo cadastrada (comparação sem diferenciar maiúscula/minúscula), a resposta `400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `cartao` que não bater com nenhum cartão ativo.
 
 Resposta `201`: o lançamento criado, no mesmo formato do `GET` abaixo.
 
@@ -70,6 +72,7 @@ Query params, todos opcionais:
 | `mes` | `yyyy-mm` (padrão: mês atual) ou `todos` |
 | `tipo` | `entrada` \| `saida` |
 | `categoria` | nome da categoria — exige `tipo` junto |
+| `cartao` | nome do cartão (ativo) |
 | `pago` | `true` \| `false` |
 | `busca` | texto livre, procura no nome |
 
@@ -87,9 +90,15 @@ Resposta `200`: lista ordenada por data (mais recente primeiro), cada item:
   "data_pagamento": null,
   "pago": false,
   "situacao": "a_vencer",
-  "metodo": "Pix"
+  "metodo": "Pix",
+  "cartao": null,
+  "data_compra": null
 }
 ```
+
+`cartao` é o nome do cartão ligado ao lançamento, ou `null` se não teve cartão.
+`data_compra` só vem preenchida quando teve cartão — nesse caso `data_prevista`
+já é o vencimento da fatura, não o dia da compra.
 
 ### `PATCH /api/lancamentos/:id/pago` — marcar como pago/recebido (ou desfazer)
 
@@ -184,8 +193,29 @@ Resposta `201`:
 { "id": "...", "nome": "Cinema", "tipo": "saida", "cor": "#64748b", "categoria_pai": "Lazer" }
 ```
 
+### `GET /api/cartoes` — listar cartões ativos
+
+```bash
+curl "https://SEU-APP.vercel.app/api/cartoes" \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+Sem query params — sempre lista todos os cartões ativos (mesmo filtro do
+`<select>` no formulário). Use os `nome` daqui no campo `cartao` de
+`POST`/`GET /api/lancamentos`.
+
+Resposta `200`:
+
+```json
+[
+  { "id": "...", "nome": "Nubank", "dia_fechamento": 25, "dia_vencimento": 5 }
+]
+```
+
 ## O que não tem (por enquanto)
 
 Anexo de comprovante, parcelamento e contas fixas não têm endpoint — só o
-que foi pedido pro agente (criar/listar lançamentos e categorias, consultar
-indicadores, marcar como pago). Dá pra adicionar do mesmo jeito depois.
+que foi pedido pro agente (criar/listar lançamentos, cartões e categorias,
+consultar indicadores, marcar como pago). Cadastrar/editar/desativar cartão
+também não — só listar os já cadastrados pela tela. Dá pra adicionar do
+mesmo jeito depois.

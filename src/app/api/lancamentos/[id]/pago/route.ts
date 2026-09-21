@@ -58,6 +58,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (error || !data) return NextResponse.json({ error: error?.message ?? "Não foi possível atualizar." }, { status: 500 });
 
   const { data: categoria } = await admin.from("categorias").select("nome").eq("id", data.categoria_id).single();
+  const { data: cartao } = data.cartao_id
+    ? await admin.from("cartoes").select("nome").eq("id", data.cartao_id).single()
+    : { data: null };
 
-  return NextResponse.json(lancamentoParaApi(data, categoria?.nome ?? "—"));
+  return NextResponse.json(lancamentoParaApi(data, categoria?.nome ?? "—", cartao?.nome ?? null));
 }
