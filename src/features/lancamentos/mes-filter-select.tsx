@@ -1,10 +1,10 @@
 "use client";
 
-/** O <select> de mês do filtro de /lancamentos — igual aos outros filtros
- * (categoria, tipo, pago), mas esse já filtra sozinho ao trocar, sem
- * precisar clicar em "Filtrar". `form.requestSubmit()` reenvia o mesmo
- * GET nativo com todos os campos preenchidos, então os outros filtros já
- * escolhidos continuam valendo. */
+/** O <select> de mês do filtro de /lancamentos — com opções fixas
+ * (diferente das do FiltroSelect genérico), mas com o mesmo comportamento:
+ * filtra sozinho ao trocar, sem precisar clicar em "Filtrar".
+ * `form.requestSubmit()` reenvia o mesmo GET nativo com todos os campos
+ * preenchidos, então os outros filtros já escolhidos continuam valendo. */
 export function MesFilterSelect({
   valor,
   opcoes,
