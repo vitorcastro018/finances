@@ -23,8 +23,8 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <div className="space-y-2">
-        <Label htmlFor="email">E-mail</Label>
-        <Input id="email" name="email" type="email" autoComplete="email" required />
+        <Label htmlFor="identificador">E-mail ou usuário</Label>
+        <Input id="identificador" name="identificador" type="text" autoComplete="username" required />
       </div>
       <div className="space-y-2">
         <Label htmlFor="senha">Senha</Label>

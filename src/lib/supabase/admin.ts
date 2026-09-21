@@ -5,8 +5,10 @@ import type { Database } from "@/lib/supabase/types";
 
 /**
  * Cliente com a service role key — ignora RLS por completo. Só pode ser
- * usado dentro de src/app/api/** (a API pro agente do n8n), nunca em Server
- * Component/Action normal — essas continuam com o cliente de sessão em
+ * usado dentro de src/app/api/** (a API pro agente do n8n) ou na Server
+ * Action de login (pra resolver usuário → e-mail em auth.users, antes de
+ * autenticar — ver lib/actions/auth.ts). Nunca pra ler/escrever as tabelas
+ * do app fora desses dois casos: essas continuam com o cliente de sessão em
  * lib/supabase/server.ts, que respeita RLS.
  *
  * Como não existe sessão de usuário vindo do n8n, todo filtro/insert nas
