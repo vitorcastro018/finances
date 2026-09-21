@@ -16,9 +16,14 @@ export type LancamentoApi = {
   pago: boolean;
   situacao: Situacao;
   metodo: string | null;
+  cartao: string | null;
+  // Só preenchida quando tem cartão — `data_prevista` nesse caso já é o
+  // vencimento da fatura (calcularDataFatura em lib/cartoes.ts), não o dia
+  // da compra.
+  data_compra: string | null;
 };
 
-export function lancamentoParaApi(lancamento: LancamentoRow, nomeCategoria: string): LancamentoApi {
+export function lancamentoParaApi(lancamento: LancamentoRow, nomeCategoria: string, nomeCartao: string | null = null): LancamentoApi {
   return {
     id: lancamento.id,
     nome: lancamento.nome,
@@ -31,5 +36,7 @@ export function lancamentoParaApi(lancamento: LancamentoRow, nomeCategoria: stri
     pago: lancamento.pago,
     situacao: calcularSituacao(lancamento.pago, lancamento.data_prevista),
     metodo: lancamento.metodo,
+    cartao: nomeCartao,
+    data_compra: lancamento.data_compra,
   };
 }
