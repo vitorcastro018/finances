@@ -50,9 +50,43 @@ export type Database = {
           },
         ];
       };
+      cartoes: {
+        Row: {
+          ativo: boolean;
+          created_at: string;
+          dia_fechamento: number;
+          dia_vencimento: number;
+          id: string;
+          nome: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          ativo?: boolean;
+          created_at?: string;
+          dia_fechamento: number;
+          dia_vencimento: number;
+          id?: string;
+          nome: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Update: {
+          ativo?: boolean;
+          created_at?: string;
+          dia_fechamento?: number;
+          dia_vencimento?: number;
+          id?: string;
+          nome?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       contas_fixas: {
         Row: {
           ativa: boolean;
+          cartao_id: string | null;
           categoria_id: string;
           created_at: string;
           dia_vencimento: number;
@@ -64,6 +98,7 @@ export type Database = {
         };
         Insert: {
           ativa?: boolean;
+          cartao_id?: string | null;
           categoria_id: string;
           created_at?: string;
           dia_vencimento: number;
@@ -75,6 +110,7 @@ export type Database = {
         };
         Update: {
           ativa?: boolean;
+          cartao_id?: string | null;
           categoria_id?: string;
           created_at?: string;
           dia_vencimento?: number;
@@ -92,15 +128,25 @@ export type Database = {
             referencedRelation: "categorias";
             referencedColumns: ["id"];
           },
+          {
+            foreignKeyName: "contas_fixas_cartao_id_fkey";
+            columns: ["cartao_id"];
+            isOneToOne: false;
+            referencedRelation: "cartoes";
+            referencedColumns: ["id"];
+          },
         ];
       };
       lancamentos: {
         Row: {
           anexo_nome: string | null;
           anexo_path: string | null;
+          cartao_id: string | null;
           categoria_id: string;
+          competencia: string | null;
           contas_fixa_id: string | null;
           created_at: string;
+          data_compra: string | null;
           data_pagamento: string | null;
           data_prevista: string;
           id: string;
@@ -120,9 +166,12 @@ export type Database = {
         Insert: {
           anexo_nome?: string | null;
           anexo_path?: string | null;
+          cartao_id?: string | null;
           categoria_id: string;
+          competencia?: string | null;
           contas_fixa_id?: string | null;
           created_at?: string;
+          data_compra?: string | null;
           data_pagamento?: string | null;
           data_prevista: string;
           id?: string;
@@ -142,9 +191,12 @@ export type Database = {
         Update: {
           anexo_nome?: string | null;
           anexo_path?: string | null;
+          cartao_id?: string | null;
           categoria_id?: string;
+          competencia?: string | null;
           contas_fixa_id?: string | null;
           created_at?: string;
+          data_compra?: string | null;
           data_pagamento?: string | null;
           data_prevista?: string;
           id?: string;
@@ -174,6 +226,13 @@ export type Database = {
             columns: ["contas_fixa_id"];
             isOneToOne: false;
             referencedRelation: "contas_fixas";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "lancamentos_cartao_id_fkey";
+            columns: ["cartao_id"];
+            isOneToOne: false;
+            referencedRelation: "cartoes";
             referencedColumns: ["id"];
           },
         ];
@@ -217,6 +276,7 @@ export type Database = {
 
 // Apelidos convenientes, usados no resto do app em vez de indexar
 // `Database["public"]["Tables"][...]` toda vez.
+export type CartaoRow = Database["public"]["Tables"]["cartoes"]["Row"];
 export type CategoriaRow = Database["public"]["Tables"]["categorias"]["Row"];
 export type ContaFixaRow = Database["public"]["Tables"]["contas_fixas"]["Row"];
 export type LancamentoRow = Database["public"]["Tables"]["lancamentos"]["Row"];

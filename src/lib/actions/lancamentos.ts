@@ -5,6 +5,7 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 
 import { BUCKET_ANEXOS, caminhoAnexo, validarAnexo } from "@/lib/anexos";
+import { calcularDataFatura } from "@/lib/cartoes";
 import { calcularParcelas } from "@/lib/parcelamento";
 import { createClient } from "@/lib/supabase/server";
 import { addMonthsToDate } from "@/lib/timezone";
@@ -24,6 +25,26 @@ function revalidarTelas() {
   revalidatePath("/lancamentos");
 }
 
+/** Quando o lançamento tem cartão, o valor digitado no campo de data é a
+ * DATA DA COMPRA, não o vencimento — aqui resolve pra data de vencimento
+ * real (a fatura em que a compra cai), buscando o fechamento/vencimento do
+ * cartão e aplicando `calcularDataFatura` (lib/cartoes.ts). Sem cartão, a
+ * data digitada já é o vencimento — nada a resolver. */
+async function resolverDataFatura(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  cartaoId: string,
+  dataCompra: string,
+): Promise<{ data?: string; error?: string }> {
+  const { data: cartao, error } = await supabase
+    .from("cartoes")
+    .select("dia_fechamento, dia_vencimento")
+    .eq("id", cartaoId)
+    .single();
+  if (error) return { error: error.message };
+  if (!cartao) return { error: "Cartão não encontrado." };
+  return { data: calcularDataFatura(dataCompra, cartao.dia_fechamento, cartao.dia_vencimento) };
+}
+
 /** Usado tanto por "adicionar conta avulsa deste mês" quanto pelo CRUD de /lancamentos.
  * Marcado como já pago na criação (checkbox do formulário) usa o próprio
  * valor/data previstos como valor/data reais — pra ajustar pra um valor
@@ -38,13 +59,26 @@ export async function criarLancamento(input: LancamentoInput, arquivo?: File): P
   const parsed = lancamentoSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
-  const { pago, ...resto } = parsed.data;
+  const { pago, cartao_id, ...resto } = parsed.data;
   const supabase = await createClient();
+
+  let dataPrevista = resto.data_prevista;
+  let dataCompra: string | null = null;
+  if (cartao_id) {
+    const resolvido = await resolverDataFatura(supabase, cartao_id, resto.data_prevista);
+    if (resolvido.error) return { error: resolvido.error };
+    dataCompra = resto.data_prevista;
+    dataPrevista = resolvido.data!;
+  }
+
   const linha: Database["public"]["Tables"]["lancamentos"]["Insert"] = {
     ...resto,
+    data_prevista: dataPrevista,
+    data_compra: dataCompra,
+    cartao_id,
     pago,
     valor_pago: pago ? resto.valor_previsto : null,
-    data_pagamento: pago ? resto.data_prevista : null,
+    data_pagamento: pago ? dataPrevista : null,
   };
 
   if (arquivo && arquivo.size > 0) {
@@ -55,7 +89,7 @@ export async function criarLancamento(input: LancamentoInput, arquivo?: File): P
     if (!auth.user) return { error: "Sessão expirada — recarregue a página e tente de novo." };
 
     const id = randomUUID();
-    const caminho = caminhoAnexo(auth.user.id, id, resto.data_prevista, arquivo.name);
+    const caminho = caminhoAnexo(auth.user.id, id, dataPrevista, arquivo.name);
     const { error: erroUpload } = await supabase.storage
       .from(BUCKET_ANEXOS)
       .upload(caminho, arquivo, { contentType: arquivo.type || undefined });
@@ -80,11 +114,30 @@ export async function editarLancamento(id: string, input: LancamentoInput): Prom
   // pago/valor_pago/data_pagamento ficam de fora da edição — quem cuida
   // disso é o "Marcar como pago"/"Desmarcar" da lista, que sabe o valor e
   // a data reais; editar não deve pisar num pagamento já registrado.
-  const { nome, tipo, categoria_id, valor_previsto, data_prevista, metodo } = parsed.data;
+  const { nome, tipo, categoria_id, valor_previsto, data_prevista, metodo, cartao_id } = parsed.data;
   const supabase = await createClient();
+
+  let dataPrevistaFinal = data_prevista;
+  let dataCompra: string | null = null;
+  if (cartao_id) {
+    const resolvido = await resolverDataFatura(supabase, cartao_id, data_prevista);
+    if (resolvido.error) return { error: resolvido.error };
+    dataCompra = data_prevista;
+    dataPrevistaFinal = resolvido.data!;
+  }
+
   const { error } = await supabase
     .from("lancamentos")
-    .update({ nome, tipo, categoria_id, valor_previsto, data_prevista, metodo })
+    .update({
+      nome,
+      tipo,
+      categoria_id,
+      valor_previsto,
+      data_prevista: dataPrevistaFinal,
+      data_compra: dataCompra,
+      metodo,
+      cartao_id,
+    })
     .eq("id", id);
   if (error) return { error: error.message };
 

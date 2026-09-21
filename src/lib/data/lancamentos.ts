@@ -58,6 +58,7 @@ export async function buscarLancamentos(filtros: FiltroLancamentos): Promise<Lan
   if (range) query = query.gte("data_prevista", range.de).lte("data_prevista", range.ate);
   if (filtros.categoria_id) query = query.eq("categoria_id", filtros.categoria_id);
   if (filtros.tipo) query = query.eq("tipo", filtros.tipo);
+  if (filtros.cartao_id) query = query.eq("cartao_id", filtros.cartao_id);
   if (filtros.pago) query = query.eq("pago", filtros.pago === "true");
   if (filtros.busca) query = query.ilike("nome", `%${filtros.busca}%`);
 

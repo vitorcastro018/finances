@@ -12,13 +12,14 @@ import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
 import { MesFilterSelect } from "@/features/lancamentos/mes-filter-select";
 import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
 import { ordenarCategoriasParaSelect } from "@/lib/categorias";
+import { getCartoes } from "@/lib/data/cartoes";
 import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentos } from "@/lib/data/lancamentos";
 import { formatCurrency, formatDate } from "@/lib/format";
 import { calcularSituacao } from "@/lib/situacao";
 import { currentMonthRef, formatMonthOptionLabel, monthRefToParam, shiftMonthRef } from "@/lib/timezone";
 import { filtroLancamentosSchema, type ColunaOrdenavel, type FiltroLancamentos } from "@/lib/validation/lancamentos";
-import type { CategoriaRow, LancamentoRow } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, LancamentoRow } from "@/lib/supabase/types";
 
 // 12 meses pra trás e 6 pra frente, a partir do mês atual — intervalo
 // generoso o bastante pra achar qualquer lançamento recente sem virar uma
@@ -39,6 +40,7 @@ function paramsDosFiltros(filtros: FiltroLancamentos): Record<string, string> {
   if (filtros.categoria_id) params.categoria_id = filtros.categoria_id;
   if (filtros.tipo) params.tipo = filtros.tipo;
   if (filtros.pago) params.pago = filtros.pago;
+  if (filtros.cartao_id) params.cartao_id = filtros.cartao_id;
   if (filtros.busca) params.busca = filtros.busca;
   return params;
 }
@@ -92,11 +94,15 @@ function CabecalhoLancamentos({ filtros }: { filtros: FiltroLancamentos }) {
 function LinhaLancamento({
   lancamento,
   categorias,
+  cartoes,
   nomeCategoria,
+  nomeCartao,
 }: {
   lancamento: LancamentoRow;
   categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
   nomeCategoria: Map<string, string>;
+  nomeCartao: Map<string, string>;
 }) {
   return (
     <TableRow>
@@ -119,12 +125,13 @@ function LinhaLancamento({
           <span className="ml-1 text-xs text-muted-foreground">(pago: {formatCurrency(lancamento.valor_pago)})</span>
         )}
       </TableCell>
-      <TableCell>{lancamento.metodo ?? "—"}</TableCell>
+      <TableCell>{lancamento.cartao_id ? (nomeCartao.get(lancamento.cartao_id) ?? "—") : (lancamento.metodo ?? "—")}</TableCell>
       <TableCell className="capitalize">{lancamento.origem}</TableCell>
       <TableCell className="flex justify-end gap-1">
         <MarcarPagoDialog conta={lancamento} />
         <LancamentoFormDialog
           categorias={categorias}
+          cartoes={cartoes}
           lancamento={lancamento}
           trigger={
             <Button variant="ghost" size="sm">
@@ -144,11 +151,15 @@ function LinhaLancamento({
 function CardLancamento({
   lancamento,
   categorias,
+  cartoes,
   nomeCategoria,
+  nomeCartao,
 }: {
   lancamento: LancamentoRow;
   categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
   nomeCategoria: Map<string, string>;
+  nomeCartao: Map<string, string>;
 }) {
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -174,13 +185,15 @@ function CardLancamento({
           )}
         </div>
         <p className="text-right text-xs text-muted-foreground capitalize">
-          {lancamento.metodo ?? "—"} · {lancamento.origem}
+          {lancamento.cartao_id ? (nomeCartao.get(lancamento.cartao_id) ?? "—") : (lancamento.metodo ?? "—")} ·{" "}
+          {lancamento.origem}
         </p>
       </div>
       <div className="mt-3 flex justify-end gap-1 border-t pt-2">
         <MarcarPagoDialog conta={lancamento} />
         <LancamentoFormDialog
           categorias={categorias}
+          cartoes={cartoes}
           lancamento={lancamento}
           trigger={
             <Button variant="ghost" size="sm">
@@ -198,14 +211,18 @@ function SecaoLancamentos({
   titulo,
   linhas,
   categorias,
+  cartoes,
   nomeCategoria,
+  nomeCartao,
   filtros,
   mensagemVazio,
 }: {
   titulo: string;
   linhas: LancamentoRow[];
   categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
   nomeCategoria: Map<string, string>;
+  nomeCartao: Map<string, string>;
   filtros: FiltroLancamentos;
   mensagemVazio: string;
 }) {
@@ -216,7 +233,14 @@ function SecaoLancamentos({
       {/* Celular: cartões (a tabela de 8 colunas não cabe numa tela estreita). */}
       <div className="space-y-2 sm:hidden">
         {linhas.map((l) => (
-          <CardLancamento key={l.id} lancamento={l} categorias={categorias} nomeCategoria={nomeCategoria} />
+          <CardLancamento
+            key={l.id}
+            lancamento={l}
+            categorias={categorias}
+            cartoes={cartoes}
+            nomeCategoria={nomeCategoria}
+            nomeCartao={nomeCartao}
+          />
         ))}
         {linhas.length === 0 && <p className="text-center text-sm text-muted-foreground">{mensagemVazio}</p>}
       </div>
@@ -227,7 +251,14 @@ function SecaoLancamentos({
           <CabecalhoLancamentos filtros={filtros} />
           <TableBody>
             {linhas.map((l) => (
-              <LinhaLancamento key={l.id} lancamento={l} categorias={categorias} nomeCategoria={nomeCategoria} />
+              <LinhaLancamento
+                key={l.id}
+                lancamento={l}
+                categorias={categorias}
+                cartoes={cartoes}
+                nomeCategoria={nomeCategoria}
+                nomeCartao={nomeCartao}
+              />
             ))}
             {linhas.length === 0 && (
               <TableRow>
@@ -251,9 +282,10 @@ export default async function LancamentosPage({
   const rawParams = await searchParams;
   const filtros = filtroLancamentosSchema.parse(rawParams);
 
-  const [linhas, categorias] = await Promise.all([buscarLancamentos(filtros), getCategorias()]);
+  const [linhas, categorias, cartoes] = await Promise.all([buscarLancamentos(filtros), getCategorias(), getCartoes()]);
 
   const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome]));
+  const nomeCartao = new Map(cartoes.map((c) => [c.id, c.nome]));
   // "categoria" não é uma coluna da tabela (é o nome da categoria ligada) —
   // pedir isso ao banco exigiria um join só pra ordenar; mais simples
   // reordenar aqui, já com os nomes resolvidos. Só afeta a página atual,
@@ -297,6 +329,7 @@ export default async function LancamentosPage({
           />
           <LancamentoFormDialog
             categorias={categorias}
+            cartoes={cartoes}
             trigger={
               <Button size="sm" aria-label="Novo lançamento">
                 <Plus className="size-4" /> <span className="hidden sm:inline">Novo lançamento</span>
@@ -309,7 +342,7 @@ export default async function LancamentosPage({
       {/* Form GET nativo — filtra sem precisar de JS no cliente, exceto o
           select de mês, que já submete sozinho ao trocar (MesFilterSelect).
           ordenar/direcao vão como hidden pra sobreviver a filtrar de novo. */}
-      <form className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6" method="get">
+      <form className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-7" method="get">
         <input type="hidden" name="ordenar" value={filtros.ordenar} />
         <input type="hidden" name="direcao" value={filtros.direcao} />
         <MesFilterSelect valor={filtros.mes} opcoes={opcoesDeMes()} />
@@ -343,6 +376,18 @@ export default async function LancamentosPage({
           <option value="true">Pago</option>
           <option value="false">Não pago</option>
         </select>
+        <select
+          name="cartao_id"
+          defaultValue={filtros.cartao_id ?? ""}
+          className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
+        >
+          <option value="">Todo cartão</option>
+          {cartoes.map((cartao) => (
+            <option key={cartao.id} value={cartao.id}>
+              {cartao.nome}
+            </option>
+          ))}
+        </select>
         <Input type="text" name="busca" defaultValue={filtros.busca} placeholder="Buscar…" className="col-span-2" />
         <Button type="submit" variant="secondary" className="col-span-2 sm:col-span-1">
           Filtrar
@@ -353,7 +398,9 @@ export default async function LancamentosPage({
         titulo="Saídas"
         linhas={saidas}
         categorias={categorias}
+        cartoes={cartoes}
         nomeCategoria={nomeCategoria}
+        nomeCartao={nomeCartao}
         filtros={filtros}
         mensagemVazio="Nenhuma saída encontrada."
       />
@@ -362,7 +409,9 @@ export default async function LancamentosPage({
         titulo="Entradas"
         linhas={entradas}
         categorias={categorias}
+        cartoes={cartoes}
         nomeCategoria={nomeCategoria}
+        nomeCartao={nomeCartao}
         filtros={filtros}
         mensagemVazio="Nenhuma entrada encontrada."
       />
