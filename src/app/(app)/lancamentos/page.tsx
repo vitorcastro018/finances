@@ -4,9 +4,10 @@ import { CreditCard, Download, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SituacaoBadge } from "@/components/ui/situacao-badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AnexoLink } from "@/features/lancamentos/anexo-link";
 import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
+import { FiltroSelect } from "@/features/lancamentos/filtro-select";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
 import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
 import { MesFilterSelect } from "@/features/lancamentos/mes-filter-select";
@@ -226,6 +227,8 @@ function SecaoLancamentos({
   filtros: FiltroLancamentos;
   mensagemVazio: string;
 }) {
+  const total = linhas.reduce((soma, l) => soma + l.valor_previsto, 0);
+
   return (
     <div className="space-y-3">
       <h2 className="text-sm font-semibold text-muted-foreground">{titulo}</h2>
@@ -243,6 +246,12 @@ function SecaoLancamentos({
           />
         ))}
         {linhas.length === 0 && <p className="text-center text-sm text-muted-foreground">{mensagemVazio}</p>}
+        {linhas.length > 0 && (
+          <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-3 text-sm font-medium">
+            <span>Total</span>
+            <span>{formatCurrency(total)}</span>
+          </div>
+        )}
       </div>
 
       {/* Desktop/tablet: tabela, com ordenação por coluna. */}
@@ -268,6 +277,17 @@ function SecaoLancamentos({
               </TableRow>
             )}
           </TableBody>
+          {linhas.length > 0 && (
+            <TableFooter>
+              <TableRow>
+                <TableCell colSpan={4} className="text-right">
+                  Total
+                </TableCell>
+                <TableCell>{formatCurrency(total)}</TableCell>
+                <TableCell colSpan={3} />
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>
@@ -346,7 +366,7 @@ export default async function LancamentosPage({
         <input type="hidden" name="ordenar" value={filtros.ordenar} />
         <input type="hidden" name="direcao" value={filtros.direcao} />
         <MesFilterSelect valor={filtros.mes} opcoes={opcoesDeMes()} />
-        <select
+        <FiltroSelect
           name="categoria_id"
           defaultValue={filtros.categoria_id ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -357,8 +377,8 @@ export default async function LancamentosPage({
               {opcao.label}
             </option>
           ))}
-        </select>
-        <select
+        </FiltroSelect>
+        <FiltroSelect
           name="tipo"
           defaultValue={filtros.tipo ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -366,8 +386,8 @@ export default async function LancamentosPage({
           <option value="">Entrada/Saída</option>
           <option value="entrada">Entrada</option>
           <option value="saida">Saída</option>
-        </select>
-        <select
+        </FiltroSelect>
+        <FiltroSelect
           name="pago"
           defaultValue={filtros.pago ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -375,8 +395,8 @@ export default async function LancamentosPage({
           <option value="">Pago/Não pago</option>
           <option value="true">Pago</option>
           <option value="false">Não pago</option>
-        </select>
-        <select
+        </FiltroSelect>
+        <FiltroSelect
           name="cartao_id"
           defaultValue={filtros.cartao_id ?? ""}
           className="h-9 rounded-md border border-input bg-transparent px-2 text-sm"
@@ -387,7 +407,7 @@ export default async function LancamentosPage({
               {cartao.nome}
             </option>
           ))}
-        </select>
+        </FiltroSelect>
         <Input type="text" name="busca" defaultValue={filtros.busca} placeholder="Buscar…" className="col-span-2" />
         <Button type="submit" variant="secondary" className="col-span-2 sm:col-span-1">
           Filtrar
