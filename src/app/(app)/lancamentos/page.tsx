@@ -3,24 +3,21 @@ import { CreditCard, Download, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { SituacaoBadge } from "@/components/ui/situacao-badge";
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { AnexoLink } from "@/features/lancamentos/anexo-link";
-import { ApagarLancamentoButton } from "@/features/lancamentos/apagar-lancamento-button";
 import { FiltroSelect } from "@/features/lancamentos/filtro-select";
+import { LancamentoCard } from "@/features/lancamentos/lancamento-card";
 import { LancamentoFormDialog } from "@/features/lancamentos/lancamento-form-dialog";
-import { MarcarPagoDialog } from "@/features/lancamentos/marcar-pago-dialog";
+import { LancamentoRow } from "@/features/lancamentos/lancamento-row";
 import { MesFilterSelect } from "@/features/lancamentos/mes-filter-select";
 import { ParcelamentoFormDialog } from "@/features/lancamentos/parcelamento-form-dialog";
 import { ordenarCategoriasParaSelect } from "@/lib/categorias";
 import { getCartoes } from "@/lib/data/cartoes";
 import { getCategorias } from "@/lib/data/categorias";
 import { buscarLancamentos } from "@/lib/data/lancamentos";
-import { formatCurrency, formatDate } from "@/lib/format";
-import { calcularSituacao } from "@/lib/situacao";
+import { formatCurrency } from "@/lib/format";
 import { currentMonthRef, formatMonthOptionLabel, monthRefToParam, shiftMonthRef } from "@/lib/timezone";
 import { filtroLancamentosSchema, type ColunaOrdenavel, type FiltroLancamentos } from "@/lib/validation/lancamentos";
-import type { CartaoRow, CategoriaRow, LancamentoRow } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, LancamentoRow as LancamentoRowData } from "@/lib/supabase/types";
 
 // 12 meses pra trás e 6 pra frente, a partir do mês atual — intervalo
 // generoso o bastante pra achar qualquer lançamento recente sem virar uma
@@ -92,122 +89,6 @@ function CabecalhoLancamentos({ filtros }: { filtros: FiltroLancamentos }) {
   );
 }
 
-function LinhaLancamento({
-  lancamento,
-  categorias,
-  cartoes,
-  nomeCategoria,
-  nomeCartao,
-}: {
-  lancamento: LancamentoRow;
-  categorias: CategoriaRow[];
-  cartoes: CartaoRow[];
-  nomeCategoria: Map<string, string>;
-  nomeCartao: Map<string, string>;
-}) {
-  return (
-    <TableRow>
-      <TableCell>
-        <SituacaoBadge situacao={calcularSituacao(lancamento.pago, lancamento.data_prevista)} />
-      </TableCell>
-      <TableCell>{formatDate(lancamento.data_prevista)}</TableCell>
-      <TableCell className="font-medium">
-        <div className="flex items-center gap-1">
-          <span className="truncate">{lancamento.nome}</span>
-          {lancamento.anexo_path && (
-            <AnexoLink anexoPath={lancamento.anexo_path} nome={lancamento.anexo_nome} compact />
-          )}
-        </div>
-      </TableCell>
-      <TableCell>{nomeCategoria.get(lancamento.categoria_id) ?? "—"}</TableCell>
-      <TableCell>
-        {formatCurrency(lancamento.valor_previsto)}
-        {lancamento.valor_pago !== null && lancamento.valor_pago !== lancamento.valor_previsto && (
-          <span className="ml-1 text-xs text-muted-foreground">(pago: {formatCurrency(lancamento.valor_pago)})</span>
-        )}
-      </TableCell>
-      <TableCell>{lancamento.cartao_id ? (nomeCartao.get(lancamento.cartao_id) ?? "—") : (lancamento.metodo ?? "—")}</TableCell>
-      <TableCell className="capitalize">{lancamento.origem}</TableCell>
-      <TableCell className="flex justify-end gap-1">
-        <MarcarPagoDialog conta={lancamento} />
-        <LancamentoFormDialog
-          categorias={categorias}
-          cartoes={cartoes}
-          lancamento={lancamento}
-          trigger={
-            <Button variant="ghost" size="sm">
-              Editar
-            </Button>
-          }
-        />
-        <ApagarLancamentoButton id={lancamento.id} nome={lancamento.nome} />
-      </TableCell>
-    </TableRow>
-  );
-}
-
-/** Versão em cartão da mesma linha, só pro celular — uma tabela de 8
- * colunas não cabe numa tela estreita sem virar uma rolagem lateral
- * ilegível. */
-function CardLancamento({
-  lancamento,
-  categorias,
-  cartoes,
-  nomeCategoria,
-  nomeCartao,
-}: {
-  lancamento: LancamentoRow;
-  categorias: CategoriaRow[];
-  cartoes: CartaoRow[];
-  nomeCategoria: Map<string, string>;
-  nomeCartao: Map<string, string>;
-}) {
-  return (
-    <div className="rounded-lg border bg-card p-3">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1">
-            <p className="truncate font-medium">{lancamento.nome}</p>
-            {lancamento.anexo_path && (
-              <AnexoLink anexoPath={lancamento.anexo_path} nome={lancamento.anexo_nome} compact />
-            )}
-          </div>
-          <p className="truncate text-xs text-muted-foreground">
-            {nomeCategoria.get(lancamento.categoria_id) ?? "—"} · {formatDate(lancamento.data_prevista)}
-          </p>
-        </div>
-        <SituacaoBadge situacao={calcularSituacao(lancamento.pago, lancamento.data_prevista)} />
-      </div>
-      <div className="mt-2 flex items-end justify-between gap-2">
-        <div>
-          <p className="text-lg font-semibold">{formatCurrency(lancamento.valor_previsto)}</p>
-          {lancamento.valor_pago !== null && lancamento.valor_pago !== lancamento.valor_previsto && (
-            <p className="text-xs text-muted-foreground">pago: {formatCurrency(lancamento.valor_pago)}</p>
-          )}
-        </div>
-        <p className="text-right text-xs text-muted-foreground capitalize">
-          {lancamento.cartao_id ? (nomeCartao.get(lancamento.cartao_id) ?? "—") : (lancamento.metodo ?? "—")} ·{" "}
-          {lancamento.origem}
-        </p>
-      </div>
-      <div className="mt-3 flex justify-end gap-1 border-t pt-2">
-        <MarcarPagoDialog conta={lancamento} />
-        <LancamentoFormDialog
-          categorias={categorias}
-          cartoes={cartoes}
-          lancamento={lancamento}
-          trigger={
-            <Button variant="ghost" size="sm">
-              Editar
-            </Button>
-          }
-        />
-        <ApagarLancamentoButton id={lancamento.id} nome={lancamento.nome} />
-      </div>
-    </div>
-  );
-}
-
 function SecaoLancamentos({
   titulo,
   linhas,
@@ -219,7 +100,7 @@ function SecaoLancamentos({
   mensagemVazio,
 }: {
   titulo: string;
-  linhas: LancamentoRow[];
+  linhas: LancamentoRowData[];
   categorias: CategoriaRow[];
   cartoes: CartaoRow[];
   nomeCategoria: Map<string, string>;
@@ -236,7 +117,7 @@ function SecaoLancamentos({
       {/* Celular: cartões (a tabela de 8 colunas não cabe numa tela estreita). */}
       <div className="space-y-2 sm:hidden">
         {linhas.map((l) => (
-          <CardLancamento
+          <LancamentoCard
             key={l.id}
             lancamento={l}
             categorias={categorias}
@@ -260,7 +141,7 @@ function SecaoLancamentos({
           <CabecalhoLancamentos filtros={filtros} />
           <TableBody>
             {linhas.map((l) => (
-              <LinhaLancamento
+              <LancamentoRow
                 key={l.id}
                 lancamento={l}
                 categorias={categorias}
