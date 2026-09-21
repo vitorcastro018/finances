@@ -38,9 +38,10 @@ curl -X POST https://SEU-APP.vercel.app/api/lancamentos \
   -H "Authorization: Bearer $API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "nome": "Supermercado",
+    "nome": "Cinema",
     "tipo": "saida",
-    "categoria": "Mercado",
+    "categoria": "Lazer",
+    "subcategoria": "Cinema",
     "valor_previsto": 187.40,
     "data_prevista": "2026-09-15",
     "metodo": "Pix",
@@ -53,8 +54,9 @@ curl -X POST https://SEU-APP.vercel.app/api/lancamentos \
 - `data_prevista` (`yyyy-mm-dd`) é opcional — sem ela, usa hoje. Sem `cartao`, é a data de vencimento (ou compra à vista). **Com `cartao`, é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário.
 - `metodo` é opcional.
 - `pago` é opcional (padrão `false`) — `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais (igual o checkbox "Já paguei" do formulário).
+- `subcategoria` é opcional — **nome** de uma subcategoria já cadastrada dentro de `categoria`. Presente, o lançamento fica ligado à subcategoria (não à categoria de topo), igual escolher a subcategoria no formulário; o `categoria` da resposta então mostra o nome da subcategoria, não o da categoria de topo (mesmo comportamento da tela).
 - `cartao` é opcional — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes` abaixo). Sem ele, o lançamento não fica ligado a nenhum cartão.
-- Se `categoria` não bater com nenhuma categoria de topo cadastrada (comparação sem diferenciar maiúscula/minúscula), a resposta `400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `cartao` que não bater com nenhum cartão ativo.
+- Se `categoria` não bater com nenhuma categoria de topo cadastrada (comparação sem diferenciar maiúscula/minúscula), a resposta `400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `subcategoria` que não existir dentro da `categoria` informada, e pra `cartao` que não bater com nenhum cartão ativo.
 
 Resposta `201`: o lançamento criado, no mesmo formato do `GET` abaixo.
 
@@ -72,9 +74,15 @@ Query params, todos opcionais:
 | `mes` | `yyyy-mm` (padrão: mês atual) ou `todos` |
 | `tipo` | `entrada` \| `saida` |
 | `categoria` | nome da categoria — exige `tipo` junto |
+| `subcategoria` | nome da subcategoria dentro de `categoria` — exige `categoria` junto |
 | `cartao` | nome do cartão (ativo) |
 | `pago` | `true` \| `false` |
 | `busca` | texto livre, procura no nome |
+
+`categoria` sozinho filtra só os lançamentos ligados exatamente a essa
+categoria de topo — não inclui os lançados numa subcategoria dela (mesmo
+comportamento do filtro na tela). Pra pegar só os de uma subcategoria
+específica, use `categoria` + `subcategoria` juntos.
 
 Resposta `200`: lista ordenada por data (mais recente primeiro), cada item:
 

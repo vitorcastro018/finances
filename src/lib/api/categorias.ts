@@ -65,3 +65,32 @@ export async function buscarCategoriaTopoPorNome(
     status: 400,
   };
 }
+
+/** Resolve uma subcategoria por nome dentro de uma categoria de topo já
+ * resolvida (`categoriaPaiId`) — usada por /api/lancamentos pra lançar (ou
+ * filtrar) direto numa subcategoria, do mesmo jeito que o formulário aceita
+ * escolher a subcategoria no `CategoriaSubcategoriaSelect` (o `categoria_id`
+ * do lançamento vira o id dela, não o da categoria de topo). */
+export async function resolverSubcategoriaPorNome(
+  admin: SupabaseClient<Database>,
+  categoriaPaiId: string,
+  categoriaPaiNome: string,
+  nome: string,
+): Promise<{ id: string; nome: string } | { erro: string; status: 400 | 500 }> {
+  const { data, error } = await admin
+    .from("categorias")
+    .select("id, nome")
+    .eq("user_id", env.APP_USER_ID!)
+    .eq("categoria_pai_id", categoriaPaiId);
+  if (error) return { erro: error.message, status: 500 };
+
+  const alvo = nome.trim().toLowerCase();
+  const encontrada = data.find((c) => c.nome.toLowerCase() === alvo);
+  if (encontrada) return { id: encontrada.id, nome: encontrada.nome };
+
+  const disponiveis = data.map((c) => c.nome).join(", ") || "nenhuma cadastrada";
+  return {
+    erro: `Subcategoria "${nome}" não encontrada em "${categoriaPaiNome}". Disponíveis: ${disponiveis}.`,
+    status: 400,
+  };
+}
