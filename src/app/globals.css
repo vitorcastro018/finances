@@ -146,3 +146,92 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Splash screen — coin & sprout intro animation (src/components/layout/splash-screen.tsx). */
+@keyframes splash-coin-in {
+  0% {
+    transform: scale(0.4);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes splash-stem-in {
+  from {
+    transform: scaleY(0);
+  }
+  to {
+    transform: scaleY(1);
+  }
+}
+@keyframes splash-leaf-in {
+  from {
+    transform: scale(0.3);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+@keyframes splash-word-in {
+  from {
+    transform: translateY(6px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+@keyframes splash-fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+.splash-overlay {
+  animation: splash-fade-out 400ms ease-in-out 2900ms forwards;
+}
+.splash-coin {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: splash-coin-in 500ms ease-out both;
+}
+.splash-stem {
+  transform-box: fill-box;
+  transform-origin: center bottom;
+  animation: splash-stem-in 400ms ease-out 550ms both;
+}
+.splash-leaf-left {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: splash-leaf-in 300ms ease-out 950ms both;
+}
+.splash-leaf-right {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: splash-leaf-in 300ms ease-out 1100ms both;
+}
+.splash-word {
+  animation: splash-word-in 300ms ease-out 1450ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash-overlay,
+  .splash-coin,
+  .splash-stem,
+  .splash-leaf-left,
+  .splash-leaf-right,
+  .splash-word {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
