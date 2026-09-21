@@ -7,6 +7,10 @@ export const lancamentoSchema = z.object({
   tipo: z.enum(["entrada", "saida"]),
   categoria_id: z.string().uuid("Escolha uma categoria"),
   valor_previsto: z.coerce.number().min(0, "Valor não pode ser negativo"),
+  // Quando cartao_id vem preenchido, isso é a DATA DA COMPRA, não o
+  // vencimento — a action resolve a data de vencimento real (a fatura em
+  // que a compra cai) antes de salvar. Ver calcularDataFatura em
+  // lib/cartoes.ts e o uso em lib/actions/lancamentos.ts.
   data_prevista: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   metodo: z
     .string()
@@ -18,6 +22,10 @@ export const lancamentoSchema = z.object({
   // editarLancamento ignora o campo pra não pisar num pagamento já
   // registrado com valor/data reais via marcarComoPago.
   pago: z.boolean().optional().default(false),
+  cartao_id: z
+    .union([z.string().uuid(), z.literal(""), z.null()])
+    .optional()
+    .transform((value) => (value ? value : null)),
 });
 
 // z.input, pelo mesmo motivo de ContaFixaInput: valor_previsto usa z.coerce.
@@ -80,6 +88,7 @@ const filtroLancamentosSchemaBase = z.object({
   categoria_id: z.string().uuid().optional(),
   tipo: z.enum(["entrada", "saida"]).optional(),
   pago: z.enum(["true", "false"]).optional(),
+  cartao_id: z.string().uuid().optional(),
   busca: z.string().trim().max(120).optional(),
   // Padrão pedido: maior valor primeiro (valor + desc).
   ordenar: z.enum(COLUNAS_ORDENAVEIS).default("valor"),

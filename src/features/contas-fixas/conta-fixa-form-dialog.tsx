@@ -18,11 +18,13 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarContaFixa, editarContaFixa } from "@/lib/actions/contas-fixas";
-import type { CategoriaRow, ContaFixaRow, TipoLancamento } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, ContaFixaRow, TipoLancamento } from "@/lib/supabase/types";
 
-type Props = { categorias: CategoriaRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
+const SEM_CARTAO = "__nenhum__";
 
-export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
+type Props = { categorias: CategoriaRow[]; cartoes: CartaoRow[]; trigger: ReactNode; contaFixa?: ContaFixaRow };
+
+export function ContaFixaFormDialog({ categorias, cartoes, trigger, contaFixa }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(contaFixa?.nome ?? "");
   // contas_fixas não tem coluna própria de tipo — herda da categoria (ver
@@ -35,6 +37,8 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
   const [valor, setValor] = useState(contaFixa?.valor_previsto != null ? String(contaFixa.valor_previsto) : "");
   const [diaVencimento, setDiaVencimento] = useState(contaFixa ? String(contaFixa.dia_vencimento) : "5");
   const [ativa, setAtiva] = useState(contaFixa?.ativa ?? true);
+  const [cartaoId, setCartaoId] = useState(contaFixa?.cartao_id ?? "");
+  const cartoesAtivos = cartoes.filter((c) => c.ativo || c.id === cartaoId);
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
   // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
@@ -45,7 +49,14 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
 
   function submeter() {
     setErro(undefined);
-    const input = { nome, categoria_id: categoriaId, valor_previsto: valor, dia_vencimento: diaVencimento, ativa };
+    const input = {
+      nome,
+      categoria_id: categoriaId,
+      valor_previsto: valor,
+      dia_vencimento: diaVencimento,
+      ativa,
+      cartao_id: cartaoId,
+    };
     startTransition(async () => {
       const result = contaFixa ? await editarContaFixa(contaFixa.id, input) : await criarContaFixa(input);
       if (result.error) {
@@ -118,7 +129,7 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dia-vencimento">Dia de vencimento</Label>
+              <Label htmlFor="dia-vencimento">{cartaoId ? "Dia que cobra no cartão" : "Dia de vencimento"}</Label>
               <Input
                 id="dia-vencimento"
                 type="number"
@@ -128,6 +139,31 @@ export function ContaFixaFormDialog({ categorias, trigger, contaFixa }: Props) {
                 onChange={(e) => setDiaVencimento(e.target.value)}
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cartão de crédito (opcional)</Label>
+            <Select
+              value={cartaoId || SEM_CARTAO}
+              onValueChange={(value) => setCartaoId(value === SEM_CARTAO ? "" : value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_CARTAO}>Nenhum</SelectItem>
+                {cartoesAtivos.map((cartao) => (
+                  <SelectItem key={cartao.id} value={cartao.id}>
+                    {cartao.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {cartaoId && (
+              <p className="text-xs text-muted-foreground">
+                Todo mês, a cobrança vai cair na fatura certa desse cartão sozinha.
+              </p>
+            )}
           </div>
 
           <label className="flex items-center gap-2 text-sm">

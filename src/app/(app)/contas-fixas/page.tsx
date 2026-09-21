@@ -5,20 +5,25 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AlternarAtivaSwitch } from "@/features/contas-fixas/alternar-ativa-switch";
 import { ContaFixaFormDialog } from "@/features/contas-fixas/conta-fixa-form-dialog";
 import { GerarPrevistosButton } from "@/features/contas-fixas/gerar-previstos-button";
+import { getCartoes } from "@/lib/data/cartoes";
 import { getCategorias } from "@/lib/data/categorias";
 import { getContasFixas } from "@/lib/data/contas-fixas";
 import { formatCurrency } from "@/lib/format";
-import type { CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, ContaFixaRow } from "@/lib/supabase/types";
 
 function TabelaContasFixas({
   contasFixas,
   categorias,
+  cartoes,
   nomeCategoria,
+  nomeCartao,
   mensagemVazio,
 }: {
   contasFixas: ContaFixaRow[];
   categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
   nomeCategoria: Map<string, string>;
+  nomeCartao: Map<string, string>;
   mensagemVazio: string;
 }) {
   return (
@@ -32,6 +37,7 @@ function TabelaContasFixas({
                 <p className="truncate font-medium">{cf.nome}</p>
                 <p className="truncate text-xs text-muted-foreground">
                   {nomeCategoria.get(cf.categoria_id) ?? "—"} · dia {cf.dia_vencimento}
+                  {cf.cartao_id && ` · ${nomeCartao.get(cf.cartao_id) ?? "cartão"}`}
                 </p>
               </div>
               <AlternarAtivaSwitch id={cf.id} ativa={cf.ativa} />
@@ -42,6 +48,7 @@ function TabelaContasFixas({
               </p>
               <ContaFixaFormDialog
                 categorias={categorias}
+                cartoes={cartoes}
                 contaFixa={cf}
                 trigger={
                   <Button variant="ghost" size="sm">
@@ -62,6 +69,7 @@ function TabelaContasFixas({
             <TableRow>
               <TableHead>Nome</TableHead>
               <TableHead>Categoria</TableHead>
+              <TableHead>Cartão</TableHead>
               <TableHead>Valor previsto</TableHead>
               <TableHead>Dia de vencimento</TableHead>
               <TableHead>Situação</TableHead>
@@ -73,6 +81,7 @@ function TabelaContasFixas({
               <TableRow key={cf.id}>
                 <TableCell className="font-medium">{cf.nome}</TableCell>
                 <TableCell>{nomeCategoria.get(cf.categoria_id) ?? "—"}</TableCell>
+                <TableCell>{cf.cartao_id ? (nomeCartao.get(cf.cartao_id) ?? "—") : "—"}</TableCell>
                 <TableCell>{cf.valor_previsto === null ? "Variável" : formatCurrency(cf.valor_previsto)}</TableCell>
                 <TableCell>Dia {cf.dia_vencimento}</TableCell>
                 <TableCell>
@@ -81,6 +90,7 @@ function TabelaContasFixas({
                 <TableCell className="text-right">
                   <ContaFixaFormDialog
                     categorias={categorias}
+                    cartoes={cartoes}
                     contaFixa={cf}
                     trigger={
                       <Button variant="ghost" size="sm">
@@ -93,7 +103,7 @@ function TabelaContasFixas({
             ))}
             {contasFixas.length === 0 && (
               <TableRow>
-                <TableCell colSpan={6} className="text-center text-muted-foreground">
+                <TableCell colSpan={7} className="text-center text-muted-foreground">
                   {mensagemVazio}
                 </TableCell>
               </TableRow>
@@ -106,8 +116,9 @@ function TabelaContasFixas({
 }
 
 export default async function ContasFixasPage() {
-  const [contasFixas, categorias] = await Promise.all([getContasFixas(), getCategorias()]);
+  const [contasFixas, categorias, cartoes] = await Promise.all([getContasFixas(), getCategorias(), getCartoes()]);
   const nomeCategoria = new Map(categorias.map((c) => [c.id, c.nome] as const));
+  const nomeCartao = new Map(cartoes.map((c) => [c.id, c.nome] as const));
   const categoriaPorId = new Map(categorias.map((c) => [c.id, c] as const));
 
   // contas_fixas não tem coluna própria de tipo — o tipo vem da categoria
@@ -123,6 +134,7 @@ export default async function ContasFixasPage() {
           <GerarPrevistosButton />
           <ContaFixaFormDialog
             categorias={categorias}
+            cartoes={cartoes}
             trigger={
               <Button size="sm" aria-label="Nova conta fixa">
                 <Plus className="size-4" /> <span className="hidden sm:inline">Nova conta fixa</span>
@@ -137,7 +149,9 @@ export default async function ContasFixasPage() {
         <TabelaContasFixas
           contasFixas={saidas}
           categorias={categorias}
+          cartoes={cartoes}
           nomeCategoria={nomeCategoria}
+          nomeCartao={nomeCartao}
           mensagemVazio="Nenhuma saída fixa cadastrada."
         />
       </div>
@@ -147,7 +161,9 @@ export default async function ContasFixasPage() {
         <TabelaContasFixas
           contasFixas={entradas}
           categorias={categorias}
+          cartoes={cartoes}
           nomeCategoria={nomeCategoria}
+          nomeCartao={nomeCartao}
           mensagemVazio="Nenhuma entrada fixa cadastrada. Ex.: Salário."
         />
       </div>

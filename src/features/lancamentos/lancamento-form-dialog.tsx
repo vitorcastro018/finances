@@ -21,24 +21,37 @@ import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-sub
 import { AnexoLink } from "@/features/lancamentos/anexo-link";
 import { criarLancamento, editarLancamento, enviarAnexoLancamento, removerAnexoLancamento } from "@/lib/actions/lancamentos";
 import { ANEXO_ACCEPT, validarAnexo } from "@/lib/anexos";
+import { calcularDataFatura } from "@/lib/cartoes";
+import { formatDate } from "@/lib/format";
 import { todayInAppTimezone } from "@/lib/timezone";
-import type { CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, LancamentoRow, TipoLancamento } from "@/lib/supabase/types";
+
+const SEM_CARTAO = "__nenhum__";
 
 type Props = {
   categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
   trigger: ReactNode;
   /** Presente = editar; ausente = criar. */
   lancamento?: LancamentoRow;
   dataPrevistaPadrao?: string;
 };
 
-export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrevistaPadrao }: Props) {
+export function LancamentoFormDialog({ categorias, cartoes, trigger, lancamento, dataPrevistaPadrao }: Props) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState(lancamento?.nome ?? "");
   const [tipo, setTipo] = useState<TipoLancamento>(lancamento?.tipo ?? "saida");
   const [categoriaId, setCategoriaId] = useState(lancamento?.categoria_id ?? "");
   const [valor, setValor] = useState(lancamento ? String(lancamento.valor_previsto) : "");
-  const [data, setData] = useState(lancamento?.data_prevista ?? dataPrevistaPadrao ?? todayInAppTimezone());
+  const [cartaoId, setCartaoId] = useState(lancamento?.cartao_id ?? "");
+  // Editando um lançamento de cartão, o campo de data reoferece a data da
+  // COMPRA (data_compra), não o vencimento já calculado (data_prevista) —
+  // senão cada edição sem mexer na data empurraria o vencimento de novo.
+  const [data, setData] = useState(
+    (lancamento?.cartao_id ? lancamento.data_compra : lancamento?.data_prevista) ??
+      dataPrevistaPadrao ??
+      todayInAppTimezone(),
+  );
   const [metodo, setMetodo] = useState(lancamento?.metodo ?? "");
   // Só existe na criação — editar não toca em pago/valor_pago/data_pagamento
   // (isso é papel do "Marcar como pago" da lista, que sabe o valor real).
@@ -56,6 +69,17 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
   const [listaCategorias, setListaCategorias] = useState(categorias);
 
   const categoriasDoTipo = useMemo(() => listaCategorias.filter((c) => c.tipo === tipo), [listaCategorias, tipo]);
+  // O cartão já escolhido continua na lista mesmo se foi desativado depois
+  // (senão o <select> "perderia" o valor atual ao editar).
+  const cartoesDisponiveis = cartoes.filter((c) => c.ativo || c.id === cartaoId);
+  const cartaoSelecionado = cartoes.find((c) => c.id === cartaoId);
+  // Preview de "em qual fatura isso cai" — mesma conta que a action faz no
+  // servidor (calcularDataFatura), só que aqui é pra mostrar na hora, antes
+  // de salvar.
+  const dataFaturaPreview =
+    cartaoSelecionado && data
+      ? calcularDataFatura(data, cartaoSelecionado.dia_fechamento, cartaoSelecionado.dia_vencimento)
+      : null;
   // Prévia local (não sobe nada, só mostra) do arquivo escolhido, quando é
   // imagem — dá pra ver que a foto certa foi selecionada antes de salvar.
   // Derivado com useMemo (não useState): criar a blob: URL não é um efeito
@@ -105,6 +129,7 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
       valor_previsto: valor,
       data_prevista: data,
       metodo,
+      cartao_id: cartaoId,
       ...(!lancamento && { pago }),
     };
     startTransition(async () => {
@@ -142,6 +167,7 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
         setNome("");
         setValor("");
         setPago(false);
+        setCartaoId("");
       }
     });
   }
@@ -210,13 +236,36 @@ export function LancamentoFormDialog({ categorias, trigger, lancamento, dataPrev
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="data">Vencimento</Label>
+              <Label htmlFor="data">{cartaoId ? "Data da compra" : "Vencimento"}</Label>
               <Input id="data" type="date" value={data} onChange={(e) => setData(e.target.value)} />
             </div>
             <div className="space-y-2">
               <Label htmlFor="metodo">Método (opcional)</Label>
               <Input id="metodo" value={metodo ?? ""} onChange={(e) => setMetodo(e.target.value)} placeholder="Pix, cartão…" />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cartão de crédito (opcional)</Label>
+            <Select
+              value={cartaoId || SEM_CARTAO}
+              onValueChange={(value) => setCartaoId(value === SEM_CARTAO ? "" : value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_CARTAO}>Nenhum</SelectItem>
+                {cartoesDisponiveis.map((cartao) => (
+                  <SelectItem key={cartao.id} value={cartao.id}>
+                    {cartao.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {dataFaturaPreview && (
+              <p className="text-xs text-muted-foreground">Cai na fatura que vence em {formatDate(dataFaturaPreview)}.</p>
+            )}
           </div>
 
           {!lancamento && (
