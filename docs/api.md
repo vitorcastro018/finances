@@ -36,6 +36,7 @@ Sem isso (ou com a chave errada), a resposta é `401`.
 | `POST` | `/api/lancamentos` | criar um lançamento |
 | `GET` | `/api/lancamentos` | listar/buscar lançamentos |
 | `PATCH` | `/api/lancamentos/:id/pago` | marcar/desmarcar como pago |
+| `DELETE` | `/api/lancamentos/:id` | excluir um lançamento |
 | `GET` | `/api/indicadores` | números do dashboard de um mês |
 | `GET` | `/api/categorias` | listar categorias (com subcategorias) |
 | `POST` | `/api/categorias` | criar categoria de topo ou subcategoria |
@@ -162,6 +163,18 @@ Com `{"pago": false}`, `valor_pago`/`data_pagamento` são ignorados mesmo se
 enviados.
 
 Resposta `200`: o lançamento atualizado. `404` se o id não existir.
+
+### `DELETE /api/lancamentos/:id` — excluir um lançamento
+
+```bash
+curl -X DELETE https://SEU-APP.vercel.app/api/lancamentos/UUID-DO-LANCAMENTO \
+  -H "Authorization: Bearer $API_KEY"
+```
+
+`:id` na URL é **obrigatório** — uuid do lançamento. Exclusão definitiva, sem
+confirmação — não dá pra desfazer.
+
+Resposta `204` sem corpo. `404` se o id não existir.
 
 ### `GET /api/indicadores` — os números do dashboard
 
