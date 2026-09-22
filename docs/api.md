@@ -44,10 +44,11 @@ Sem isso (ou com a chave errada), a resposta é `401`.
 Detalhes de cada um, com os parâmetros obrigatórios e opcionais, abaixo.
 
 Em todo body de `POST`/`PATCH`, um campo **opcional** marcado "Não" na tabela
-pode vir tanto omitido quanto como `null` — os dois são tratados do mesmo
-jeito, como "não veio". Útil pra automações (n8n incluído) que sempre
-mandam todo campo do formulário, preenchido ou não. Um campo **obrigatório**
-mandado como `null` conta como se estivesse faltando, e dá o mesmo erro de
+pode vir omitido, como `null`, ou como a string `"null"` — os três são
+tratados do mesmo jeito, como "não veio" (útil pra automações, n8n
+incluído, que às vezes mandam o texto `"null"` em vez do `null` de verdade
+pra um campo que não têm valor). Um campo **obrigatório** mandado como
+`null`/`"null"` conta como se estivesse faltando, e dá o mesmo erro de
 "obrigatório" de quando ele é omitido.
 
 ## Endpoints
