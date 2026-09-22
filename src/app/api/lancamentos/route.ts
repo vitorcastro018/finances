@@ -3,8 +3,8 @@ import { z } from "zod";
 
 import { verificarApiKey } from "@/lib/api/auth";
 import { resolverCartaoPorNome } from "@/lib/api/cartoes";
-import { resolverCategoriaPorNome } from "@/lib/api/categorias";
-import { lancamentoParaApi } from "@/lib/api/lancamentos";
+import { resolverCategoriaPorNome, resolverSubcategoriaPorNome } from "@/lib/api/categorias";
+import { lancamentoParaApi, resolverNomesCategoria } from "@/lib/api/lancamentos";
 import { semCamposVazios } from "@/lib/api/query-utils";
 import { calcularDataFatura } from "@/lib/cartoes";
 import { rangeDoMes } from "@/lib/data/lancamentos";
@@ -75,28 +75,29 @@ export async function GET(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const [{ data: categorias }, { data: cartoes }] = await Promise.all([
-    admin.from("categorias").select("id, nome").eq("user_id", env.APP_USER_ID!),
+    admin.from("categorias").select("id, nome, categoria_pai_id").eq("user_id", env.APP_USER_ID!),
     admin.from("cartoes").select("id, nome").eq("user_id", env.APP_USER_ID!),
   ]);
-  const nomeCategoriaPorId = new Map((categorias ?? []).map((c) => [c.id, c.nome]));
+  const categoriasPorId = new Map((categorias ?? []).map((c) => [c.id, c]));
   const nomeCartaoPorId = new Map((cartoes ?? []).map((c) => [c.id, c.nome]));
 
   return NextResponse.json(
-    data.map((l) =>
-      lancamentoParaApi(
-        l,
-        nomeCategoriaPorId.get(l.categoria_id) ?? "—",
-        l.cartao_id ? (nomeCartaoPorId.get(l.cartao_id) ?? null) : null,
-      ),
-    ),
+    data.map((l) => {
+      const { categoria, subcategoria } = resolverNomesCategoria(l.categoria_id, categoriasPorId);
+      return lancamentoParaApi(l, categoria, subcategoria, l.cartao_id ? (nomeCartaoPorId.get(l.cartao_id) ?? null) : null);
+    }),
   );
 }
 
 const criarApiSchema = z.object({
   nome: z.string().trim().min(1, "nome é obrigatório").max(120),
   tipo: z.enum(["entrada", "saida"]),
-  // Nome da categoria, não uuid — resolverCategoriaPorNome traduz.
+  // Nome da categoria de topo, não uuid — resolverCategoriaPorNome traduz.
   categoria: z.string().trim().min(1, "categoria é obrigatória"),
+  // Nome de uma subcategoria de `categoria`, não uuid — resolverSubcategoriaPorNome
+  // traduz. Opcional: sem ela, o lançamento fica direto na categoria de topo
+  // (igual não escolher nada no <select> de subcategoria do formulário).
+  subcategoria: z.string().trim().min(1).optional(),
   valor_previsto: z.coerce.number().min(0, "valor_previsto não pode ser negativo"),
   // Sem cartão: data do vencimento (ou compra à vista). Com cartão: data DA
   // COMPRA — a rota resolve pro vencimento da fatura, igual ao formulário
@@ -110,7 +111,7 @@ const criarApiSchema = z.object({
 });
 
 /** POST /api/lancamentos
- * Body: { nome, tipo, categoria, valor_previsto, data_prevista?, metodo?, pago?, cartao? } */
+ * Body: { nome, tipo, categoria, subcategoria?, valor_previsto, data_prevista?, metodo?, pago?, cartao? } */
 export async function POST(request: NextRequest) {
   const erroAuth = verificarApiKey(request);
   if (erroAuth) return erroAuth;
@@ -125,6 +126,13 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient();
   const categoria = await resolverCategoriaPorNome(admin, input.categoria, input.tipo);
   if ("erro" in categoria) return NextResponse.json({ error: categoria.erro }, { status: categoria.status });
+
+  let subcategoria: { id: string; nome: string } | null = null;
+  if (input.subcategoria) {
+    const resolvida = await resolverSubcategoriaPorNome(admin, input.subcategoria, categoria.id, categoria.nome);
+    if ("erro" in resolvida) return NextResponse.json({ error: resolvida.erro }, { status: resolvida.status });
+    subcategoria = resolvida;
+  }
 
   let cartao: { id: string; nome: string; dia_fechamento: number; dia_vencimento: number } | null = null;
   if (input.cartao) {
@@ -145,7 +153,7 @@ export async function POST(request: NextRequest) {
     user_id: env.APP_USER_ID!,
     nome: input.nome,
     tipo: input.tipo,
-    categoria_id: categoria.id,
+    categoria_id: subcategoria?.id ?? categoria.id,
     valor_previsto: input.valor_previsto,
     data_prevista: dataPrevista,
     data_compra: dataCompra,
@@ -159,5 +167,5 @@ export async function POST(request: NextRequest) {
   const { data, error } = await admin.from("lancamentos").insert(linha).select().single();
   if (error || !data) return NextResponse.json({ error: error?.message ?? "Não foi possível criar." }, { status: 500 });
 
-  return NextResponse.json(lancamentoParaApi(data, categoria.nome, cartao?.nome ?? null), { status: 201 });
+  return NextResponse.json(lancamentoParaApi(data, categoria.nome, subcategoria?.nome ?? null, cartao?.nome ?? null), { status: 201 });
 }

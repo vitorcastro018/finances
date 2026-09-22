@@ -57,10 +57,22 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .single();
   if (error || !data) return NextResponse.json({ error: error?.message ?? "Não foi possível atualizar." }, { status: 500 });
 
-  const { data: categoria } = await admin.from("categorias").select("nome").eq("id", data.categoria_id).single();
+  const { data: categoriaRow } = await admin
+    .from("categorias")
+    .select("nome, categoria_pai_id")
+    .eq("id", data.categoria_id)
+    .single();
+  let nomeCategoria = categoriaRow?.nome ?? "—";
+  let nomeSubcategoria: string | null = null;
+  if (categoriaRow?.categoria_pai_id) {
+    const { data: pai } = await admin.from("categorias").select("nome").eq("id", categoriaRow.categoria_pai_id).single();
+    nomeSubcategoria = categoriaRow.nome;
+    nomeCategoria = pai?.nome ?? "—";
+  }
+
   const { data: cartao } = data.cartao_id
     ? await admin.from("cartoes").select("nome").eq("id", data.cartao_id).single()
     : { data: null };
 
-  return NextResponse.json(lancamentoParaApi(data, categoria?.nome ?? "—", cartao?.nome ?? null));
+  return NextResponse.json(lancamentoParaApi(data, nomeCategoria, nomeSubcategoria, cartao?.nome ?? null));
 }

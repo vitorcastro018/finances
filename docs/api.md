@@ -55,6 +55,7 @@ curl -X POST https://SEU-APP.vercel.app/api/lancamentos \
     "nome": "Supermercado",
     "tipo": "saida",
     "categoria": "Mercado",
+    "subcategoria": "Hortifruti",
     "valor_previsto": 187.40,
     "data_prevista": "2026-09-15",
     "metodo": "Pix",
@@ -69,7 +70,8 @@ Body (JSON):
 |---|---|---|---|
 | `nome` | **Sim** | string (1–120 chars) | — |
 | `tipo` | **Sim** | `"entrada"` \| `"saida"` | — |
-| `categoria` | **Sim** | string — **nome**, não id; precisa já existir (ver `GET /api/categorias`) | comparação sem diferenciar maiúscula/minúscula |
+| `categoria` | **Sim** | string — **nome** de uma categoria de topo, não id; precisa já existir (ver `GET /api/categorias`) | comparação sem diferenciar maiúscula/minúscula |
+| `subcategoria` | Não | string — **nome** de uma subcategoria de `categoria`, não id | sem ela, o lançamento fica direto na categoria de topo (igual não escolher nada no `<select>` de subcategoria do formulário) |
 | `valor_previsto` | **Sim** | número ≥ 0 | — |
 | `data_prevista` | Não | `yyyy-mm-dd` | sem ela, usa hoje. Sem `cartao`: é a data de vencimento (ou compra à vista). **Com `cartao`: é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário |
 | `metodo` | Não | string (até 60 chars) | sem valor, fica `null` |
@@ -77,8 +79,10 @@ Body (JSON):
 | `cartao` | Não | string — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes`) | sem ele, o lançamento não fica ligado a nenhum cartão |
 
 Se `categoria` não bater com nenhuma categoria de topo cadastrada, a resposta
-`400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `cartao`
-que não bater com nenhum cartão ativo.
+`400` lista as categorias disponíveis daquele tipo. Se `subcategoria` não
+bater com nenhuma subcategoria de `categoria`, a resposta `400` lista as
+subcategorias disponíveis dela. Mesma coisa pra `cartao` que não bater com
+nenhum cartão ativo.
 
 Resposta `201`: o lançamento criado, no mesmo formato do `GET` abaixo.
 
@@ -95,7 +99,7 @@ Query params, todos opcionais:
 |---|---|---|
 | `mes` | Não | `yyyy-mm` (padrão: mês atual) ou `todos` |
 | `tipo` | Não | `entrada` \| `saida` |
-| `categoria` | Não — mas se vier, exige `tipo` junto (senão `400`) | nome da categoria |
+| `categoria` | Não — mas se vier, exige `tipo` junto (senão `400`) | nome da categoria de topo — filtra só quem está direto nela, não pega lançamentos numa subcategoria dela (sem filtro por subcategoria por enquanto) |
 | `cartao` | Não | nome do cartão (ativo) |
 | `pago` | Não | `true` \| `false` |
 | `busca` | Não | texto livre, procura no nome |
@@ -108,6 +112,7 @@ Resposta `200`: lista ordenada por data (mais recente primeiro), cada item:
   "nome": "Supermercado",
   "tipo": "saida",
   "categoria": "Mercado",
+  "subcategoria": "Hortifruti",
   "valor_previsto": 187.4,
   "valor_pago": null,
   "data_prevista": "2026-09-15",
@@ -120,6 +125,8 @@ Resposta `200`: lista ordenada por data (mais recente primeiro), cada item:
 }
 ```
 
+`categoria` é sempre a categoria de topo; `subcategoria` é `null` quando o
+lançamento está direto na categoria de topo, sem subcategoria escolhida.
 `cartao` é o nome do cartão ligado ao lançamento, ou `null` se não teve cartão.
 `data_compra` só vem preenchida quando teve cartão — nesse caso `data_prevista`
 já é o vencimento da fatura, não o dia da compra.

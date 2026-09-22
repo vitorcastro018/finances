@@ -65,3 +65,31 @@ export async function buscarCategoriaTopoPorNome(
     status: 400,
   };
 }
+
+/** Como `resolverCategoriaPorNome`, mas pra achar uma SUBcategoria dentro de
+ * uma categoria de topo já resolvida — o agente do n8n fala em nome
+ * ("Hortifruti"), não em uuid. `categoriaPaiNome` é só pra deixar a mensagem
+ * de erro clara (a busca em si usa `categoriaPaiId`). */
+export async function resolverSubcategoriaPorNome(
+  admin: SupabaseClient<Database>,
+  nome: string,
+  categoriaPaiId: string,
+  categoriaPaiNome: string,
+): Promise<{ id: string; nome: string } | { erro: string; status: 400 | 500 }> {
+  const { data, error } = await admin
+    .from("categorias")
+    .select("id, nome")
+    .eq("user_id", env.APP_USER_ID!)
+    .eq("categoria_pai_id", categoriaPaiId);
+  if (error) return { erro: error.message, status: 500 };
+
+  const alvo = nome.trim().toLowerCase();
+  const encontrada = data.find((c) => c.nome.toLowerCase() === alvo);
+  if (encontrada) return { id: encontrada.id, nome: encontrada.nome };
+
+  const disponiveis = data.map((c) => c.nome).join(", ") || "nenhuma cadastrada";
+  return {
+    erro: `Subcategoria "${nome}" não encontrada em "${categoriaPaiNome}". Disponíveis: ${disponiveis}.`,
+    status: 400,
+  };
+}
