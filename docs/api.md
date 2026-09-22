@@ -29,6 +29,20 @@ Authorization: Bearer <API_KEY>
 
 Sem isso (ou com a chave errada), a resposta é `401`.
 
+## Resumo dos endpoints
+
+| Método | Rota | Pra que serve |
+|---|---|---|
+| `POST` | `/api/lancamentos` | criar um lançamento |
+| `GET` | `/api/lancamentos` | listar/buscar lançamentos |
+| `PATCH` | `/api/lancamentos/:id/pago` | marcar/desmarcar como pago |
+| `GET` | `/api/indicadores` | números do dashboard de um mês |
+| `GET` | `/api/categorias` | listar categorias (com subcategorias) |
+| `POST` | `/api/categorias` | criar categoria de topo ou subcategoria |
+| `GET` | `/api/cartoes` | listar cartões ativos |
+
+Detalhes de cada um, com os parâmetros obrigatórios e opcionais, abaixo.
+
 ## Endpoints
 
 ### `POST /api/lancamentos` — criar um lançamento
@@ -49,12 +63,22 @@ curl -X POST https://SEU-APP.vercel.app/api/lancamentos \
   }'
 ```
 
-- `nome`, `tipo` (`"entrada"` ou `"saida"`), `categoria` (**nome**, não id — precisa já existir) e `valor_previsto` são obrigatórios.
-- `data_prevista` (`yyyy-mm-dd`) é opcional — sem ela, usa hoje. Sem `cartao`, é a data de vencimento (ou compra à vista). **Com `cartao`, é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário.
-- `metodo` é opcional.
-- `pago` é opcional (padrão `false`) — `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais (igual o checkbox "Já paguei" do formulário).
-- `cartao` é opcional — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes` abaixo). Sem ele, o lançamento não fica ligado a nenhum cartão.
-- Se `categoria` não bater com nenhuma categoria de topo cadastrada (comparação sem diferenciar maiúscula/minúscula), a resposta `400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `cartao` que não bater com nenhum cartão ativo.
+Body (JSON):
+
+| Campo | Obrigatório? | Tipo / valores | Padrão / comportamento |
+|---|---|---|---|
+| `nome` | **Sim** | string (1–120 chars) | — |
+| `tipo` | **Sim** | `"entrada"` \| `"saida"` | — |
+| `categoria` | **Sim** | string — **nome**, não id; precisa já existir (ver `GET /api/categorias`) | comparação sem diferenciar maiúscula/minúscula |
+| `valor_previsto` | **Sim** | número ≥ 0 | — |
+| `data_prevista` | Não | `yyyy-mm-dd` | sem ela, usa hoje. Sem `cartao`: é a data de vencimento (ou compra à vista). **Com `cartao`: é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário |
+| `metodo` | Não | string (até 60 chars) | sem valor, fica `null` |
+| `pago` | Não | booleano | padrão `false`. `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais — igual o checkbox "Já paguei" do formulário |
+| `cartao` | Não | string — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes`) | sem ele, o lançamento não fica ligado a nenhum cartão |
+
+Se `categoria` não bater com nenhuma categoria de topo cadastrada, a resposta
+`400` lista as categorias disponíveis daquele tipo. Mesma coisa pra `cartao`
+que não bater com nenhum cartão ativo.
 
 Resposta `201`: o lançamento criado, no mesmo formato do `GET` abaixo.
 
@@ -67,14 +91,14 @@ curl "https://SEU-APP.vercel.app/api/lancamentos?mes=2026-09&tipo=saida&pago=fal
 
 Query params, todos opcionais:
 
-| Param | Valores |
-|---|---|
-| `mes` | `yyyy-mm` (padrão: mês atual) ou `todos` |
-| `tipo` | `entrada` \| `saida` |
-| `categoria` | nome da categoria — exige `tipo` junto |
-| `cartao` | nome do cartão (ativo) |
-| `pago` | `true` \| `false` |
-| `busca` | texto livre, procura no nome |
+| Param | Obrigatório? | Valores |
+|---|---|---|
+| `mes` | Não | `yyyy-mm` (padrão: mês atual) ou `todos` |
+| `tipo` | Não | `entrada` \| `saida` |
+| `categoria` | Não — mas se vier, exige `tipo` junto (senão `400`) | nome da categoria |
+| `cartao` | Não | nome do cartão (ativo) |
+| `pago` | Não | `true` \| `false` |
+| `busca` | Não | texto livre, procura no nome |
 
 Resposta `200`: lista ordenada por data (mais recente primeiro), cada item:
 
@@ -109,8 +133,18 @@ curl -X PATCH https://SEU-APP.vercel.app/api/lancamentos/UUID-DO-LANCAMENTO/pago
   -d '{"pago": true, "valor_pago": 190.00, "data_pagamento": "2026-09-16"}'
 ```
 
-- `pago: true` sem `valor_pago`/`data_pagamento` usa o valor/data previstos do próprio lançamento.
-- `{"pago": false}` desmarca (limpa valor/data pagos).
+`:id` na URL é **obrigatório** — uuid do lançamento.
+
+Body (JSON):
+
+| Campo | Obrigatório? | Tipo / valores | Padrão / comportamento |
+|---|---|---|---|
+| `pago` | **Sim** | booleano | `true` marca como pago; `false` desmarca (limpa `valor_pago`/`data_pagamento`) |
+| `valor_pago` | Não — só faz sentido com `pago: true` | número ≥ 0 | omitido, usa o `valor_previsto` do próprio lançamento |
+| `data_pagamento` | Não — só faz sentido com `pago: true` | `yyyy-mm-dd` | omitido, usa a `data_prevista` do próprio lançamento |
+
+Com `{"pago": false}`, `valor_pago`/`data_pagamento` são ignorados mesmo se
+enviados.
 
 Resposta `200`: o lançamento atualizado. `404` se o id não existir.
 
@@ -121,7 +155,9 @@ curl "https://SEU-APP.vercel.app/api/indicadores?mes=2026-09" \
   -H "Authorization: Bearer $API_KEY"
 ```
 
-`mes` (`yyyy-mm`) é opcional, padrão o mês atual — sem opção "todos" aqui (indicador é sempre de um mês).
+| Param | Obrigatório? | Valores |
+|---|---|---|
+| `mes` | Não | `yyyy-mm`, padrão o mês atual — sem opção `"todos"` aqui (indicador é sempre de um mês) |
 
 Resposta `200`:
 
@@ -147,7 +183,9 @@ curl "https://SEU-APP.vercel.app/api/categorias?tipo=saida" \
   -H "Authorization: Bearer $API_KEY"
 ```
 
-`tipo` (`entrada` \| `saida`) é opcional — sem ele, lista os dois.
+| Param | Obrigatório? | Valores |
+|---|---|---|
+| `tipo` | Não | `entrada` \| `saida` — sem ele, lista os dois |
 
 Resposta `200`: categorias de topo, cada uma já com suas subcategorias:
 
@@ -183,9 +221,17 @@ curl -X POST https://SEU-APP.vercel.app/api/categorias \
   -d '{"nome": "Cinema", "categoria_pai": "Lazer"}'
 ```
 
-- `cor` (`#rrggbb`) é opcional e só vale pra categoria de topo — numa subcategoria é ignorado (vem do pai).
-- Nome duplicado (mesmo entre categoria e subcategoria — o nome é único por conta, não por tipo) → `409`.
-- `categoria_pai` que não existir → `400`, listando as categorias de topo disponíveis.
+Body (JSON):
+
+| Campo | Obrigatório? | Tipo / valores | Padrão / comportamento |
+|---|---|---|---|
+| `nome` | **Sim** | string (1–60 chars) | — |
+| `tipo` | **Sim** pra categoria de topo (sem `categoria_pai`). Ignorado se vier junto com `categoria_pai` | `"entrada"` \| `"saida"` | numa subcategoria, é sempre herdado do pai — não dá pra escolher à parte |
+| `categoria_pai` | Não — presença é o que decide: com ele cria subcategoria, sem ele cria categoria de topo | string — **nome** de uma categoria de topo já existente | se não bater com nenhuma, `400` listando as disponíveis |
+| `cor` | Não, e só vale pra categoria de topo | `#rrggbb` | numa subcategoria é ignorado (vem do pai). Sem valor numa categoria de topo, usa a cor padrão |
+
+Nome duplicado (mesmo entre categoria e subcategoria — o nome é único por
+conta, não por tipo) → `409`.
 
 Resposta `201`:
 
