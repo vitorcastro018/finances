@@ -3,20 +3,25 @@ import { z } from "zod";
 
 import { verificarApiKey } from "@/lib/api/auth";
 import { lancamentoParaApi } from "@/lib/api/lancamentos";
+import { semCamposNulos } from "@/lib/api/query-utils";
 import { booleanApiSchema } from "@/lib/api/schemas";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
-const marcarApiSchema = z.object({
-  pago: booleanApiSchema,
-  // Só fazem sentido com pago:true — omitidos, caem no valor/data previstos
-  // do próprio lançamento (mesmo padrão do checkbox "Já paguei" do app).
-  valor_pago: z.coerce.number().min(0).optional(),
-  data_pagamento: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "data_pagamento inválida, use yyyy-mm-dd")
-    .optional(),
-});
+const marcarApiSchema = z.preprocess(
+  semCamposNulos,
+  z.object({
+    pago: booleanApiSchema,
+    // Só fazem sentido com pago:true — omitidos (ou null), caem no valor/data
+    // previstos do próprio lançamento (mesmo padrão do checkbox "Já paguei"
+    // do app).
+    valor_pago: z.coerce.number().min(0).optional(),
+    data_pagamento: z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "data_pagamento inválida, use yyyy-mm-dd")
+      .optional(),
+  }),
+);
 
 /** PATCH /api/lancamentos/:id/pago
  * Body: { pago: true, valor_pago?, data_pagamento? } ou { pago: false } */

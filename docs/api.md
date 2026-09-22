@@ -43,6 +43,13 @@ Sem isso (ou com a chave errada), a resposta é `401`.
 
 Detalhes de cada um, com os parâmetros obrigatórios e opcionais, abaixo.
 
+Em todo body de `POST`/`PATCH`, um campo **opcional** marcado "Não" na tabela
+pode vir tanto omitido quanto como `null` — os dois são tratados do mesmo
+jeito, como "não veio". Útil pra automações (n8n incluído) que sempre
+mandam todo campo do formulário, preenchido ou não. Um campo **obrigatório**
+mandado como `null` conta como se estivesse faltando, e dá o mesmo erro de
+"obrigatório" de quando ele é omitido.
+
 ## Endpoints
 
 ### `POST /api/lancamentos` — criar um lançamento

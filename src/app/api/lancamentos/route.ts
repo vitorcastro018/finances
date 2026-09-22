@@ -5,7 +5,7 @@ import { verificarApiKey } from "@/lib/api/auth";
 import { resolverCartaoPorNome } from "@/lib/api/cartoes";
 import { resolverCategoriaPorNome, resolverSubcategoriaPorNome } from "@/lib/api/categorias";
 import { lancamentoParaApi, resolverNomesCategoria } from "@/lib/api/lancamentos";
-import { semCamposVazios } from "@/lib/api/query-utils";
+import { semCamposNulos, semCamposVazios } from "@/lib/api/query-utils";
 import { booleanApiSchema } from "@/lib/api/schemas";
 import { calcularDataFatura } from "@/lib/cartoes";
 import { rangeDoMes } from "@/lib/data/lancamentos";
@@ -90,26 +90,29 @@ export async function GET(request: NextRequest) {
   );
 }
 
-const criarApiSchema = z.object({
-  nome: z.string().trim().min(1, "nome é obrigatório").max(120),
-  tipo: z.enum(["entrada", "saida"]),
-  // Nome da categoria de topo, não uuid — resolverCategoriaPorNome traduz.
-  categoria: z.string().trim().min(1, "categoria é obrigatória"),
-  // Nome de uma subcategoria de `categoria`, não uuid — resolverSubcategoriaPorNome
-  // traduz. Opcional: sem ela, o lançamento fica direto na categoria de topo
-  // (igual não escolher nada no <select> de subcategoria do formulário).
-  subcategoria: z.string().trim().min(1).optional(),
-  valor_previsto: z.coerce.number().min(0, "valor_previsto não pode ser negativo"),
-  // Sem cartão: data do vencimento (ou compra à vista). Com cartão: data DA
-  // COMPRA — a rota resolve pro vencimento da fatura, igual ao formulário
-  // (lib/actions/lancamentos.ts). Sem data, assume hoje.
-  data_prevista: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "data_prevista inválida, use yyyy-mm-dd").optional(),
-  metodo: z.string().trim().max(60).optional(),
-  pago: booleanApiSchema.optional().default(false),
-  // Nome do cartão, não uuid — resolverCartaoPorNome traduz. Opcional: sem
-  // ele, o lançamento não é ligado a nenhum cartão (igual ao formulário).
-  cartao: z.string().trim().min(1).optional(),
-});
+const criarApiSchema = z.preprocess(
+  semCamposNulos,
+  z.object({
+    nome: z.string().trim().min(1, "nome é obrigatório").max(120),
+    tipo: z.enum(["entrada", "saida"]),
+    // Nome da categoria de topo, não uuid — resolverCategoriaPorNome traduz.
+    categoria: z.string().trim().min(1, "categoria é obrigatória"),
+    // Nome de uma subcategoria de `categoria`, não uuid — resolverSubcategoriaPorNome
+    // traduz. Opcional: sem ela, o lançamento fica direto na categoria de topo
+    // (igual não escolher nada no <select> de subcategoria do formulário).
+    subcategoria: z.string().trim().min(1).optional(),
+    valor_previsto: z.coerce.number().min(0, "valor_previsto não pode ser negativo"),
+    // Sem cartão: data do vencimento (ou compra à vista). Com cartão: data DA
+    // COMPRA — a rota resolve pro vencimento da fatura, igual ao formulário
+    // (lib/actions/lancamentos.ts). Sem data, assume hoje.
+    data_prevista: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "data_prevista inválida, use yyyy-mm-dd").optional(),
+    metodo: z.string().trim().max(60).optional(),
+    pago: booleanApiSchema.optional().default(false),
+    // Nome do cartão, não uuid — resolverCartaoPorNome traduz. Opcional: sem
+    // ele, o lançamento não é ligado a nenhum cartão (igual ao formulário).
+    cartao: z.string().trim().min(1).optional(),
+  }),
+);
 
 /** POST /api/lancamentos
  * Body: { nome, tipo, categoria, subcategoria?, valor_previsto, data_prevista?, metodo?, pago?, cartao? } */
