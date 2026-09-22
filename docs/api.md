@@ -75,7 +75,7 @@ Body (JSON):
 | `valor_previsto` | **Sim** | número ≥ 0 | — |
 | `data_prevista` | Não | `yyyy-mm-dd` | sem ela, usa hoje. Sem `cartao`: é a data de vencimento (ou compra à vista). **Com `cartao`: é a data DA COMPRA** — a rota calcula sozinha em qual fatura ela cai (fechamento/vencimento do cartão) e grava isso como `data_prevista`, igual ao formulário |
 | `metodo` | Não | string (até 60 chars) | sem valor, fica `null` |
-| `pago` | Não | booleano | padrão `false`. `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais — igual o checkbox "Já paguei" do formulário |
+| `pago` | Não | booleano — aceita `true`/`false` de verdade ou a string `"true"`/`"false"` | padrão `false`. `true` já lança como pago, usando o próprio valor/data previstos (já resolvidos pra fatura, se houver cartão) como reais — igual o checkbox "Já paguei" do formulário |
 | `cartao` | Não | string — **nome** de um cartão ativo já cadastrado (ver `GET /api/cartoes`) | sem ele, o lançamento não fica ligado a nenhum cartão |
 
 Se `categoria` não bater com nenhuma categoria de topo cadastrada, a resposta
@@ -146,7 +146,7 @@ Body (JSON):
 
 | Campo | Obrigatório? | Tipo / valores | Padrão / comportamento |
 |---|---|---|---|
-| `pago` | **Sim** | booleano | `true` marca como pago; `false` desmarca (limpa `valor_pago`/`data_pagamento`) |
+| `pago` | **Sim** | booleano — aceita `true`/`false` de verdade ou a string `"true"`/`"false"` | `true` marca como pago; `false` desmarca (limpa `valor_pago`/`data_pagamento`) |
 | `valor_pago` | Não — só faz sentido com `pago: true` | número ≥ 0 | omitido, usa o `valor_previsto` do próprio lançamento |
 | `data_pagamento` | Não — só faz sentido com `pago: true` | `yyyy-mm-dd` | omitido, usa a `data_prevista` do próprio lançamento |
 
