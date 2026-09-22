@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { verificarApiKey } from "@/lib/api/auth";
 import { buscarCategoriaTopoPorNome } from "@/lib/api/categorias";
-import { semCamposVazios } from "@/lib/api/query-utils";
+import { semCamposNulos, semCamposVazios } from "@/lib/api/query-utils";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Database } from "@/lib/supabase/types";
@@ -46,20 +46,23 @@ export async function GET(request: NextRequest) {
   return NextResponse.json(resposta);
 }
 
-const criarApiSchema = z.object({
-  nome: z.string().trim().min(1, "nome é obrigatório").max(60),
-  // Obrigatório só pra categoria de topo — numa subcategoria (categoria_pai
-  // preenchido) é ignorado: tipo e cor são sempre herdados do pai, mesma
-  // regra da tela (SubcategoriaFormDialog).
-  tipo: z.enum(["entrada", "saida"]).optional(),
-  cor: z
-    .string()
-    .regex(/^#[0-9a-fA-F]{6}$/, "cor inválida, use #rrggbb")
-    .optional(),
-  // Nome de uma categoria de topo já existente — presente = cria uma
-  // subcategoria dentro dela; ausente = cria categoria de topo.
-  categoria_pai: z.string().trim().min(1).optional(),
-});
+const criarApiSchema = z.preprocess(
+  semCamposNulos,
+  z.object({
+    nome: z.string().trim().min(1, "nome é obrigatório").max(60),
+    // Obrigatório só pra categoria de topo — numa subcategoria (categoria_pai
+    // preenchido) é ignorado: tipo e cor são sempre herdados do pai, mesma
+    // regra da tela (SubcategoriaFormDialog).
+    tipo: z.enum(["entrada", "saida"]).optional(),
+    cor: z
+      .string()
+      .regex(/^#[0-9a-fA-F]{6}$/, "cor inválida, use #rrggbb")
+      .optional(),
+    // Nome de uma categoria de topo já existente — presente = cria uma
+    // subcategoria dentro dela; ausente = cria categoria de topo.
+    categoria_pai: z.string().trim().min(1).optional(),
+  }),
+);
 
 /** POST /api/categorias
  * Categoria de topo: { nome, tipo, cor? }
