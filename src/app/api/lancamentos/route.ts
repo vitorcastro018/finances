@@ -6,6 +6,7 @@ import { resolverCartaoPorNome } from "@/lib/api/cartoes";
 import { resolverCategoriaPorNome, resolverSubcategoriaPorNome } from "@/lib/api/categorias";
 import { lancamentoParaApi, resolverNomesCategoria } from "@/lib/api/lancamentos";
 import { semCamposVazios } from "@/lib/api/query-utils";
+import { booleanApiSchema } from "@/lib/api/schemas";
 import { calcularDataFatura } from "@/lib/cartoes";
 import { rangeDoMes } from "@/lib/data/lancamentos";
 import { env } from "@/lib/env";
@@ -104,7 +105,7 @@ const criarApiSchema = z.object({
   // (lib/actions/lancamentos.ts). Sem data, assume hoje.
   data_prevista: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "data_prevista inválida, use yyyy-mm-dd").optional(),
   metodo: z.string().trim().max(60).optional(),
-  pago: z.boolean().optional().default(false),
+  pago: booleanApiSchema.optional().default(false),
   // Nome do cartão, não uuid — resolverCartaoPorNome traduz. Opcional: sem
   // ele, o lançamento não é ligado a nenhum cartão (igual ao formulário).
   cartao: z.string().trim().min(1).optional(),

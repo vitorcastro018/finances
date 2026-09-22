@@ -3,11 +3,12 @@ import { z } from "zod";
 
 import { verificarApiKey } from "@/lib/api/auth";
 import { lancamentoParaApi } from "@/lib/api/lancamentos";
+import { booleanApiSchema } from "@/lib/api/schemas";
 import { env } from "@/lib/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 const marcarApiSchema = z.object({
-  pago: z.boolean(),
+  pago: booleanApiSchema,
   // Só fazem sentido com pago:true — omitidos, caem no valor/data previstos
   // do próprio lançamento (mesmo padrão do checkbox "Já paguei" do app).
   valor_pago: z.coerce.number().min(0).optional(),
