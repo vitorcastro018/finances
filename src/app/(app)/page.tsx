@@ -68,8 +68,17 @@ export default async function DashboardPage({
         categoria: topo?.nome ?? conta.categoria_nome,
         cor: topo?.cor ?? conta.categoria_cor,
         total: 0,
+        lancamentos: [],
       };
       atual.total += conta.valor_previsto;
+      atual.lancamentos.push({
+        id: conta.id,
+        nome: conta.nome,
+        valor_previsto: conta.valor_previsto,
+        valor_pago: conta.valor_pago,
+        data_prevista: conta.data_prevista,
+        situacao: conta.situacao,
+      });
       porCategoria.set(chave, atual);
     }
     return porCategoria;
@@ -87,8 +96,17 @@ export default async function DashboardPage({
         categoria: pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome,
         cor: categoria.cor,
         total: 0,
+        lancamentos: [],
       };
       atual.total += conta.valor_previsto;
+      atual.lancamentos.push({
+        id: conta.id,
+        nome: conta.nome,
+        valor_previsto: conta.valor_previsto,
+        valor_pago: conta.valor_pago,
+        data_prevista: conta.data_prevista,
+        situacao: conta.situacao,
+      });
       porSubcategoria.set(categoria.id, atual);
     }
     return porSubcategoria;

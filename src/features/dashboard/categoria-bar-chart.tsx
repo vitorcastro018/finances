@@ -1,10 +1,34 @@
 "use client";
 
+import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
-import { formatCurrency } from "@/lib/format";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { SituacaoBadge } from "@/components/ui/situacao-badge";
+import { formatCurrency, formatDate } from "@/lib/format";
+import type { Situacao } from "@/lib/supabase/types";
 
-export type ValorPorCategoria = { categoria: string; cor: string; total: number };
+export type LancamentoDaBarra = {
+  id: string;
+  nome: string;
+  valor_previsto: number;
+  valor_pago: number | null;
+  data_prevista: string;
+  situacao: Situacao;
+};
+
+export type ValorPorCategoria = {
+  categoria: string;
+  cor: string;
+  total: number;
+  lancamentos: LancamentoDaBarra[];
+};
 
 // Alto o bastante pra aguentar até 3 linhas quando o nome "Categoria ›
 // Subcategoria" não cabe em 2 no espaço do rótulo (ver LARGURA_ROTULO) —
@@ -37,56 +61,101 @@ export function CategoriaBarChart({
   dados: ValorPorCategoria[];
   mensagemVazio?: string;
 }) {
+  const [selecionada, setSelecionada] = useState<ValorPorCategoria | null>(null);
+
   if (dados.length === 0) {
     return <p className="flex h-24 items-center justify-center text-sm text-muted-foreground">{mensagemVazio}</p>;
   }
 
   const altura = Math.max(ALTURA_MINIMA, dados.length * ALTURA_POR_BARRA + 20);
+  const lancamentosOrdenados = [...(selecionada?.lancamentos ?? [])].sort((a, b) =>
+    a.data_prevista.localeCompare(b.data_prevista),
+  );
 
   return (
-    <ResponsiveContainer width="100%" height={altura}>
-      <BarChart data={dados} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 4 }} barGap={4}>
-        <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
-        <XAxis
-          type="number"
-          domain={[0, (max: number) => max * 1.15]}
-          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={(value: number) => formatCurrency(value)}
-        />
-        <YAxis
-          type="category"
-          dataKey="categoria"
-          width={LARGURA_ROTULO}
-          tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
-          tickLine={false}
-          axisLine={false}
-          tickFormatter={truncarRotulo}
-        />
-        <Tooltip
-          formatter={(value) => formatCurrency(Number(value))}
-          cursor={{ fill: "var(--muted)" }}
-          contentStyle={{
-            background: "var(--popover)",
-            color: "var(--popover-foreground)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-md)",
-            fontSize: 12,
-          }}
-        />
-        <Bar dataKey="total" radius={[0, 4, 4, 0]} barSize={20}>
-          {dados.map((item) => (
-            <Cell key={item.categoria} fill={item.cor} />
-          ))}
-          <LabelList
-            dataKey="total"
-            position="right"
-            formatter={(value) => (typeof value === "number" ? formatCurrency(value) : "")}
-            style={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+    <>
+      <ResponsiveContainer width="100%" height={altura}>
+        <BarChart data={dados} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 4 }} barGap={4}>
+          <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
+          <XAxis
+            type="number"
+            domain={[0, (max: number) => max * 1.15]}
+            tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={(value: number) => formatCurrency(value)}
           />
-        </Bar>
-      </BarChart>
-    </ResponsiveContainer>
+          <YAxis
+            type="category"
+            dataKey="categoria"
+            width={LARGURA_ROTULO}
+            tick={{ fontSize: 12, fill: "var(--muted-foreground)" }}
+            tickLine={false}
+            axisLine={false}
+            tickFormatter={truncarRotulo}
+          />
+          <Tooltip
+            formatter={(value) => formatCurrency(Number(value))}
+            cursor={{ fill: "var(--muted)" }}
+            contentStyle={{
+              background: "var(--popover)",
+              color: "var(--popover-foreground)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-md)",
+              fontSize: 12,
+            }}
+          />
+          <Bar
+            dataKey="total"
+            radius={[0, 4, 4, 0]}
+            barSize={20}
+            className="cursor-pointer"
+            onClick={(item: { payload?: ValorPorCategoria }) => item.payload && setSelecionada(item.payload)}
+          >
+            {dados.map((item) => (
+              <Cell key={item.categoria} fill={item.cor} />
+            ))}
+            <LabelList
+              dataKey="total"
+              position="right"
+              formatter={(value) => (typeof value === "number" ? formatCurrency(value) : "")}
+              style={{ fill: "var(--muted-foreground)", fontSize: 12 }}
+            />
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+
+      <Dialog open={selecionada !== null} onOpenChange={(open) => !open && setSelecionada(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{selecionada?.categoria}</DialogTitle>
+            <DialogDescription>
+              {lancamentosOrdenados.length}{" "}
+              {lancamentosOrdenados.length === 1 ? "lançamento" : "lançamentos"} · total{" "}
+              {formatCurrency(selecionada?.total ?? 0)}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] space-y-2 overflow-y-auto">
+            {lancamentosOrdenados.map((lancamento) => (
+              <div
+                key={lancamento.id}
+                className="flex items-center justify-between gap-2 rounded-md border p-3 text-sm"
+              >
+                <div className="min-w-0">
+                  <p className="truncate font-medium">{lancamento.nome}</p>
+                  <p className="text-xs text-muted-foreground">{formatDate(lancamento.data_prevista)}</p>
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-medium">
+                    {formatCurrency(lancamento.valor_pago ?? lancamento.valor_previsto)}
+                  </span>
+                  <SituacaoBadge situacao={lancamento.situacao} />
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

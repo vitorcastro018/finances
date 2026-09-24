@@ -161,24 +161,39 @@ export async function criarParcelamento(input: ParcelamentoInput): Promise<Actio
   const parsed = parcelamentoSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0]?.message };
 
-  const { nome, tipo, categoria_id, valor_total, parcelas, juros_mensal, data_primeira_parcela, metodo } =
+  const { nome, tipo, categoria_id, valor_total, parcelas, juros_mensal, data_primeira_parcela, metodo, cartao_id } =
     parsed.data;
   const valores = calcularParcelas({ valorTotal: valor_total, parcelas, jurosMensal: juros_mensal });
   const parcelamentoId = randomUUID();
+  const supabase = await createClient();
+
+  // Com cartão, a data digitada é a DATA DA COMPRA da 1ª parcela — resolve
+  // pra fatura em que ela cai e soma um mês por parcela a partir dali (cada
+  // parcela seguinte cai na fatura do mês seguinte, mesmo dia de
+  // vencimento). Sem cartão, a data já é o vencimento da 1ª parcela.
+  let dataBase = data_primeira_parcela;
+  let dataCompra: string | null = null;
+  if (cartao_id) {
+    const resolvido = await resolverDataFatura(supabase, cartao_id, data_primeira_parcela);
+    if (resolvido.error) return { error: resolvido.error };
+    dataCompra = data_primeira_parcela;
+    dataBase = resolvido.data!;
+  }
 
   const linhas = valores.map((valor, index) => ({
     nome: `${nome} (${index + 1}/${parcelas})`,
     tipo,
     categoria_id,
     valor_previsto: valor,
-    data_prevista: addMonthsToDate(data_primeira_parcela, index),
+    data_prevista: addMonthsToDate(dataBase, index),
+    data_compra: dataCompra,
     metodo,
+    cartao_id,
     parcelamento_id: parcelamentoId,
     parcela_numero: index + 1,
     parcela_total: parcelas,
   }));
 
-  const supabase = await createClient();
   const { error } = await supabase.from("lancamentos").insert(linhas);
   if (error) return { error: error.message };
 

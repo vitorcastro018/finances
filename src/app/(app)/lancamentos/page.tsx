@@ -222,6 +222,7 @@ export default async function LancamentosPage({
           </Button>
           <ParcelamentoFormDialog
             categorias={categorias}
+            cartoes={cartoes}
             trigger={
               <Button variant="secondary" size="sm" aria-label="Parcelado">
                 <CreditCard className="size-4" /> <span className="hidden sm:inline">Parcelado</span>

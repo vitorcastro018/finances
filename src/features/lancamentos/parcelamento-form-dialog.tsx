@@ -17,12 +17,23 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CategoriaSubcategoriaSelect } from "@/features/categorias/categoria-subcategoria-select";
 import { criarParcelamento } from "@/lib/actions/lancamentos";
-import { formatCurrency } from "@/lib/format";
+import { calcularDataFatura } from "@/lib/cartoes";
+import { formatCurrency, formatDate } from "@/lib/format";
 import { calcularParcelas } from "@/lib/parcelamento";
 import { todayInAppTimezone } from "@/lib/timezone";
-import type { CategoriaRow, TipoLancamento } from "@/lib/supabase/types";
+import type { CartaoRow, CategoriaRow, TipoLancamento } from "@/lib/supabase/types";
 
-export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: CategoriaRow[]; trigger: ReactNode }) {
+const SEM_CARTAO = "__nenhum__";
+
+export function ParcelamentoFormDialog({
+  categorias,
+  cartoes,
+  trigger,
+}: {
+  categorias: CategoriaRow[];
+  cartoes: CartaoRow[];
+  trigger: ReactNode;
+}) {
   const [open, setOpen] = useState(false);
   const [nome, setNome] = useState("");
   const [tipo, setTipo] = useState<TipoLancamento>("saida");
@@ -32,6 +43,7 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
   const [jurosMensal, setJurosMensal] = useState("");
   const [dataPrimeira, setDataPrimeira] = useState(todayInAppTimezone());
   const [metodo, setMetodo] = useState("");
+  const [cartaoId, setCartaoId] = useState("");
   const [pending, startTransition] = useTransition();
   const [erro, setErro] = useState<string | undefined>();
   // Cópia local: permite adicionar a categoria criada na hora, sem esperar a
@@ -39,6 +51,14 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
   const [listaCategorias, setListaCategorias] = useState(categorias);
 
   const categoriasDoTipo = useMemo(() => listaCategorias.filter((c) => c.tipo === tipo), [listaCategorias, tipo]);
+  const cartaoSelecionado = cartoes.find((c) => c.id === cartaoId);
+  const cartoesDisponiveis = cartoes.filter((c) => c.ativo || c.id === cartaoId);
+  // Mesmo preview instantâneo do formulário de lançamento avulso: em qual
+  // fatura a 1ª parcela cai, antes de salvar (ver calcularDataFatura).
+  const dataFaturaPreview =
+    cartaoSelecionado && dataPrimeira
+      ? calcularDataFatura(dataPrimeira, cartaoSelecionado.dia_fechamento, cartaoSelecionado.dia_vencimento)
+      : null;
 
   const preview = useMemo(() => {
     const total = Number(valorTotal);
@@ -60,6 +80,7 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
         juros_mensal: jurosMensal || "0",
         data_primeira_parcela: dataPrimeira,
         metodo,
+        cartao_id: cartaoId,
       });
       if (result.error) {
         setErro(result.error);
@@ -155,7 +176,7 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
 
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label htmlFor="data-primeira">1ª parcela</Label>
+              <Label htmlFor="data-primeira">{cartaoId ? "Data da compra" : "1ª parcela"}</Label>
               <Input
                 id="data-primeira"
                 type="date"
@@ -172,6 +193,32 @@ export function ParcelamentoFormDialog({ categorias, trigger }: { categorias: Ca
                 placeholder="Cartão Nubank…"
               />
             </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Cartão de crédito (opcional)</Label>
+            <Select
+              value={cartaoId || SEM_CARTAO}
+              onValueChange={(value) => setCartaoId(value === SEM_CARTAO ? "" : value)}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={SEM_CARTAO}>Nenhum</SelectItem>
+                {cartoesDisponiveis.map((cartao) => (
+                  <SelectItem key={cartao.id} value={cartao.id}>
+                    {cartao.nome}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {dataFaturaPreview && (
+              <p className="text-xs text-muted-foreground">
+                1ª parcela cai na fatura que vence em {formatDate(dataFaturaPreview)}; as seguintes, um mês depois
+                da outra.
+              </p>
+            )}
           </div>
 
           {preview && (

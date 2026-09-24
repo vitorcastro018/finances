@@ -50,11 +50,18 @@ export const parcelamentoSchema = z.object({
   parcelas: z.coerce.number().int().min(2, "Mínimo 2 parcelas").max(60, "Máximo 60 parcelas"),
   // Vazio = sem juros (divisão simples do valor total).
   juros_mensal: z.coerce.number().min(0, "Juros não pode ser negativo").max(100, "Juros muito alto").optional().default(0),
+  // Quando cartao_id vem preenchido, isso é a DATA DA COMPRA da 1ª parcela —
+  // a action resolve a fatura em que ela cai (calcularDataFatura) e soma um
+  // mês por parcela a partir dali, mesma lógica de lancamentoSchema.
   data_primeira_parcela: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Data inválida"),
   metodo: z
     .string()
     .trim()
     .max(60)
+    .optional()
+    .transform((value) => (value ? value : null)),
+  cartao_id: z
+    .union([z.string().uuid(), z.literal(""), z.null()])
     .optional()
     .transform((value) => (value ? value : null)),
 });
