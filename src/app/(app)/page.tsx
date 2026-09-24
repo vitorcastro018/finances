@@ -91,9 +91,8 @@ export default async function DashboardPage({
     for (const conta of lista) {
       const categoria = categoriaPorId.get(conta.categoria_id);
       if (!categoria?.categoria_pai_id) continue;
-      const pai = categoriaPorId.get(categoria.categoria_pai_id);
       const atual = porSubcategoria.get(categoria.id) ?? {
-        categoria: pai ? `${pai.nome} › ${categoria.nome}` : categoria.nome,
+        categoria: categoria.nome,
         cor: categoria.cor,
         total: 0,
         lancamentos: [],
