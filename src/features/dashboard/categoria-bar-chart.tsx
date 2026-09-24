@@ -68,6 +68,9 @@ export function CategoriaBarChart({
   }
 
   const altura = Math.max(ALTURA_MINIMA, dados.length * ALTURA_POR_BARRA + 20);
+  // Maior valor primeiro (barra de cima pra baixo) — em todo gráfico de
+  // categoria/subcategoria, exceto o de evolução mensal (que ordena por mês).
+  const dadosOrdenados = [...dados].sort((a, b) => b.total - a.total);
   const lancamentosOrdenados = [...(selecionada?.lancamentos ?? [])].sort((a, b) =>
     a.data_prevista.localeCompare(b.data_prevista),
   );
@@ -75,7 +78,7 @@ export function CategoriaBarChart({
   return (
     <>
       <ResponsiveContainer width="100%" height={altura}>
-        <BarChart data={dados} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 4 }} barGap={4}>
+        <BarChart data={dadosOrdenados} layout="vertical" margin={{ top: 4, right: 56, bottom: 4, left: 4 }} barGap={4}>
           <CartesianGrid strokeDasharray="3 3" horizontal={false} className="stroke-border" />
           <XAxis
             type="number"
@@ -112,7 +115,7 @@ export function CategoriaBarChart({
             className="cursor-pointer"
             onClick={(item: { payload?: ValorPorCategoria }) => item.payload && setSelecionada(item.payload)}
           >
-            {dados.map((item) => (
+            {dadosOrdenados.map((item) => (
               <Cell key={item.categoria} fill={item.cor} />
             ))}
             <LabelList
